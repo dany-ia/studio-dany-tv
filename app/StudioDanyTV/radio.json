@@ -1,0 +1,71 @@
+{
+  "_comment": "Radio by time of day. Hours are local (America/Cancun). Slots may wrap past midnight. First station is the primary, the rest are fallbacks / skip targets (remote left/right). All URLs verified playing on the TV on 2026-11-05.",
+  "crossfadeMs": 2000,
+  "slots": [
+    {
+      "name": "Lofi Coffee",
+      "from": 6,
+      "to": 12,
+      "stations": [
+        {
+          "name": "laut.fm lofi",
+          "url": "https://lofi.stream.laut.fm/lofi"
+        },
+        {
+          "name": "FluxFM Chillhop",
+          "url": "https://streams.fluxfm.de/Chillhop/mp3-128/streams.fluxfm.de/"
+        },
+        {
+          "name": "Zeno Lofi Hip Hop",
+          "url": "https://stream.zeno.fm/0r0xa792kwzuv"
+        },
+        {
+          "name": "I Love Chillhop",
+          "url": "https://streams.ilovemusic.de/iloveradio17.mp3"
+        }
+      ]
+    },
+    {
+      "name": "Lofi Reggae",
+      "from": 12,
+      "to": 19,
+      "stations": [
+        {
+          "name": "SomaFM Heavyweight Reggae",
+          "url": "https://ice1.somafm.com/reggae-128-mp3"
+        },
+        {
+          "name": "laut.fm dub",
+          "url": "https://dub.stream.laut.fm/dub"
+        },
+        {
+          "name": "laut.fm reggae",
+          "url": "https://reggae.stream.laut.fm/reggae"
+        }
+      ]
+    },
+    {
+      "name": "Jazz Lofi",
+      "from": 19,
+      "to": 6,
+      "stations": [
+        {
+          "name": "laut.fm jazz",
+          "url": "https://jazz.stream.laut.fm/jazz"
+        },
+        {
+          "name": "SomaFM Illinois Street Lounge",
+          "url": "https://ice1.somafm.com/illstreet-128-mp3"
+        },
+        {
+          "name": "FluxFM Jazzradio",
+          "url": "https://streams.fluxfm.de/Jazzradio/mp3-128/streams.fluxfm.de/"
+        },
+        {
+          "name": "SomaFM Sonic Universe",
+          "url": "https://ice1.somafm.com/sonicuniverse-128-mp3"
+        }
+      ]
+    }
+  ]
+}

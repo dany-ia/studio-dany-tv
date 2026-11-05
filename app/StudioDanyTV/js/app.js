@@ -5,10 +5,6 @@
   var CFG = {
     lat: 20.63, lon: -87.07, tz: "America/Cancun",
     weatherEveryMs: 15 * 60 * 1000,
-    streams: [
-      { name: "groove salad · somafm", url: "https://ice1.somafm.com/groovesalad-128-mp3" },
-      { name: "fluid · somafm", url: "https://ice1.somafm.com/fluid-128-mp3" }
-    ],
     devOnStart: true,           // show the dev/fps overlay at launch (0 key toggles it)
     benchOnStart: false         // run the resolution/quality benchmark 5 s after launch (measurement runs only)
   };
@@ -71,38 +67,16 @@
   }
   try { var cached = JSON.parse(localStorage.getItem("wx")); if (cached && cached.data) { lastWx = cached; renderWx(cached.data); } } catch (e) {}
 
-  // ---------- radio ----------
-  var audio, bars, lbl, streamIdx = 0;
-  function setRadioUI(state, extra) {
-    bars.className = "bars " + (state === "playing" ? "" : state === "muted" ? "muted" : "off");
-    var names = { idle: "OK para reproducir", playing: CFG.streams[streamIdx].name, muted: "en silencio · OK para activar sonido", error: "sin señal · OK para reintentar", loading: "conectando…" };
-    lbl.textContent = "lofi radio · " + (extra || names[state]);
-  }
-  function play() {
-    audio.src = CFG.streams[streamIdx].url; setRadioUI("loading");
-    var p = audio.play();
-    if (p && p.then) {
-      p.then(function () { setRadioUI(audio.muted ? "muted" : "playing"); })
-       .catch(function (err) {
-         if (err && err.name === "NotAllowedError" && !audio.muted) { audio.muted = true; play(); }
-         else setRadioUI("error");
-       });
-    }
-  }
-  function toggleRadio() {
-    if (audio.muted && !audio.paused) { audio.muted = false; setRadioUI("playing"); return; }
-    if (audio.paused) { audio.muted = false; play(); }
-    else { audio.pause(); setRadioUI("idle"); }
+  // ---------- radio (js/radio.js + radio.json) ----------
+  function radioUI(l) {
+    $("bars").className = "bars " + (l.status === "sonando" ? "" : "off");
+    $("radioSlot").textContent = l.slot.toLowerCase();
+    $("radioLabel").textContent = (l.station ? l.station + " · " : "") + l.status;
   }
   function radioInit() {
-    audio = $("radio"); bars = $("bars"); lbl = $("radioLabel");
-    audio.addEventListener("error", function () {
-      if (streamIdx < CFG.streams.length - 1) { streamIdx++; play(); } else { streamIdx = 0; setRadioUI("error"); }
-    });
-    audio.addEventListener("stalled", function () { setRadioUI(audio.muted ? "muted" : "playing", "reconectando…"); });
-    audio.addEventListener("playing", function () { setRadioUI(audio.muted ? "muted" : "playing"); });
-    play();
+    Radio.init($("radioA"), $("radioB"), function () { return Scene.state().hour; }, radioUI);   // forced hours switch the slot too
   }
+  function toggleRadio() { Radio.toggle(); }
 
   // ---------- dev overlay (0 key) ----------
   // fields: hour / weather code / month / day / wind (scene overrides) + quality / resolution / sky rate (live switches)
@@ -129,12 +103,12 @@
     var line = "";
     for (var i = 0; i < FIELDS.length; i++) line += (i === D.field ? "[" : " ") + FIELDS[i] + " " + vals[i] + (i === D.field ? "]" : " ") + " ";
     $("dev").textContent = "FPS " + f.value + " (peor " + f.worst + " ms)  bg " + z.w + "x" + z.h + " q" + z.q + " cielo 1/" + z.s + "  " + I.gl + "  gpu " + I.renderer.slice(0, 22) + "\n" +
-      "bench " + (I.bench || "…") + "\n" +
+      "bench " + (I.bench || "…") + "   radio " + (Radio.testLog() || "(VERDE: probar estaciones)") + "\n" +
       line + "\n◄► campo  ▲▼ valor  1-4 horas 06:30/12:00/18:15/23:00  5 hora real  ROJO reset  0 cerrar   sol " + window.ENV.sunrise.toFixed(2) + "/" + window.ENV.sunset.toFixed(2);
   }
 
   // ---------- keys ----------
-  var KEY = { ENTER: 13, RETURN: 10009, PLAYPAUSE: 10252, PLAY: 415, PAUSE: 19, RED: 403, LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ZERO: 48, FIVE: 53 };
+  var KEY = { ENTER: 13, RETURN: 10009, PLAYPAUSE: 10252, PLAY: 415, PAUSE: 19, RED: 403, GREEN: 404, LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ZERO: 48, FIVE: 53 };
   function registerKeys() {
     var names = ["MediaPlayPause", "MediaPlay", "MediaPause", "ColorF0Red", "ColorF1Green", "ColorF2Yellow", "ColorF3Blue", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
     for (var i = 0; i < names.length; i++) { try { tizen.tvinputdevice.registerKey(names[i]); } catch (e) {} }
@@ -156,22 +130,37 @@
       if (k === KEY.UP) { devAdjust(1); devRender(); return; }
       if (k === KEY.DOWN) { devAdjust(-1); devRender(); return; }
       if (k === KEY.RED) { clearOverrides(); devRender(); return; }
+      if (k === KEY.GREEN) { Radio.test(7); devRender(); return; }
       if (PRESETS[k] != null) { D.hour = PRESETS[k]; Scene.skyDirty = true; devRender(); return; }
       if (k === KEY.FIVE) { D.hour = null; Scene.skyDirty = true; devRender(); return; }
     }
     if (k === KEY.ENTER || k === KEY.PLAYPAUSE || k === KEY.PLAY || k === KEY.PAUSE) { toggleRadio(); e.preventDefault(); }
+    else if (k === KEY.LEFT) Radio.next(-1);
+    else if (k === KEY.RIGHT) Radio.next(1);
     else if (k === KEY.RETURN) { try { tizen.application.getCurrentApplication().exit(); } catch (err) {} }
+  }
+
+  // ---------- URL params (local preview in a desktop browser): ?hour=23&code=61&month=11&day=2&wind=20&dev=0 ----------
+  function applyUrlParams() {
+    var q = {}, m, re = /[?&]([^=&]+)=([^&]*)/g, s = location.search;
+    while ((m = re.exec(s))) q[m[1]] = decodeURIComponent(m[2]);
+    var D = window.DEV;
+    if (q.hour != null) D.hour = parseFloat(q.hour); if (q.code != null) D.code = parseInt(q.code, 10);
+    if (q.month != null) D.month = parseInt(q.month, 10); if (q.day != null) D.day = parseInt(q.day, 10); if (q.wind != null) D.wind = parseFloat(q.wind);
+    if (q.dev != null) CFG.devOnStart = q.dev === "1";
+    if (q.radio === "0") CFG.radio = false;
   }
 
   // ---------- boot ----------
   window.onload = function () {
+    applyUrlParams();
     tick(); setInterval(tick, 1000);
     registerKeys(); document.addEventListener("keydown", onKey);
     try { webapis.appcommon.setScreenSaver(webapis.appcommon.AppCommonScreenSaverState.SCREEN_SAVER_OFF); } catch (e) {}
     Sprites.start($("fg"));
     var ok = Scene.start($("bg"));
     weather(); setInterval(weather, CFG.weatherEveryMs);
-    radioInit();
+    if (CFG.radio !== false) radioInit();
     if (CFG.devOnStart) { window.DEV.on = true; $("dev").classList.remove("hidden"); }
     setInterval(devRender, 500);
     if (ok && CFG.benchOnStart) setTimeout(function () { Scene.bench(); }, 5000);

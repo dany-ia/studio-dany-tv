@@ -5,6 +5,18 @@
       {
         "path": "Debug/projects/StudioDanyTV/css/style.css",
         "type": "modify"
+      },
+      {
+        "path": "Debug/projects/StudioDanyTV/js/app.js",
+        "type": "modify"
+      },
+      {
+        "path": "Debug/projects/StudioDanyTV/js/radio.js",
+        "type": "modify"
+      },
+      {
+        "path": "Debug/projects/StudioDanyTV/js/sprites.js",
+        "type": "modify"
       }
     ]
   }

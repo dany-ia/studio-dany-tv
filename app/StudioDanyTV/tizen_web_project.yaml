@@ -34,7 +34,9 @@ files:
   - js/gl.js
   - js/shaders.js
   - js/sprites.js
+  - js/radio.js
   - js/scene.js
+  - radio.json
   - fonts/PressStart2P-Regular.ttf
   - fonts/VT323-Regular.ttf
   - fonts/OFL-PressStart2P.txt

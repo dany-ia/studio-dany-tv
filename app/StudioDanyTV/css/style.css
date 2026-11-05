@@ -21,9 +21,11 @@ html,body{margin:0;width:100%;height:100%;background:#05060f;overflow:hidden;cur
 .weather{font-size:42px;margin-top:6px;color:var(--dim)}
 .weather b{color:var(--accent);font-weight:normal}
 
-.radio{position:fixed;left:84px;bottom:56px;z-index:5;font-size:34px;color:var(--dim);display:flex;align-items:center;gap:18px;text-shadow:0 0 3px #000,0 0 12px rgba(0,0,0,.7);will-change:transform}
-.bars{display:inline-flex;gap:5px;align-items:flex-end;height:30px}
-.bars i{width:7px;height:30px;background:var(--accent);transform:scaleY(.25);transform-origin:bottom;animation:eq 1s infinite ease-in-out;will-change:transform}
+/* no will-change here: on the TV it produced a garbled label (the text layer and the animated bars fought for a compositor layer) */
+.radio{position:fixed;left:84px;bottom:56px;z-index:5;font-size:34px;color:var(--dim);display:flex;align-items:center;gap:18px;text-shadow:0 0 3px #000,0 0 12px rgba(0,0,0,.7)}
+.radio .slot{color:var(--accent);margin-right:6px}
+.bars{display:inline-flex;gap:5px;align-items:flex-end;height:30px;width:55px;flex:none;overflow:hidden}
+.bars i{width:7px;height:30px;background:var(--accent);transform:scaleY(.25);transform-origin:bottom;animation:eq 1s infinite ease-in-out}
 .bars i:nth-child(2){animation-delay:.22s}.bars i:nth-child(3){animation-delay:.41s}.bars i:nth-child(4){animation-delay:.13s}.bars i:nth-child(5){animation-delay:.33s}
 .bars.off i{animation:none;transform:scaleY(.2);background:#6a5a4a}
 .bars.muted i{animation:none;transform:scaleY(.4);background:#7a6a4a}
@@ -34,7 +36,7 @@ html,body{margin:0;width:100%;height:100%;background:#05060f;overflow:hidden;cur
 .corner .tag{font-family:"PS2P",monospace;font-size:18px;letter-spacing:3px;color:var(--accent)}
 .corner .place{font-size:32px;margin-top:8px}
 
-.dev{position:fixed;left:84px;top:430px;z-index:6;margin:0;font-family:"VT323",monospace;font-size:34px;line-height:1.2;will-change:transform;
-  color:#8dffb0;background:rgba(0,0,0,.65);padding:12px 18px;border:2px solid #2d6}
+.dev{position:fixed;left:84px;top:430px;z-index:6;margin:0;font-family:"VT323",monospace;font-size:34px;line-height:1.2;
+  color:#8dffb0;background:rgba(0,0,0,.65);padding:12px 18px;border:2px solid #2d6;max-width:1500px;white-space:pre-wrap}
 .devmark{position:fixed;right:84px;bottom:56px;z-index:6;font-family:"PS2P",monospace;font-size:14px;color:#8dffb0;border:2px solid #2d6;padding:6px 10px;background:rgba(0,0,0,.5)}
 .hidden{display:none}

@@ -3,8 +3,32 @@
   "deploys": {
     "next": [
       {
-        "path": "Debug/projects/StudioDanyTV/js/scene.js",
+        "path": "Debug/projects/StudioDanyTV/css/style.css",
         "type": "modify"
+      },
+      {
+        "path": "Debug/projects/StudioDanyTV/index.html",
+        "type": "modify"
+      },
+      {
+        "path": "Debug/projects/StudioDanyTV/js/app.js",
+        "type": "modify"
+      },
+      {
+        "path": "Debug/projects/StudioDanyTV/js/shaders.js",
+        "type": "modify"
+      },
+      {
+        "path": "Debug/projects/StudioDanyTV/js/sprites.js",
+        "type": "modify"
+      },
+      {
+        "path": "Debug/projects/StudioDanyTV/js/radio.js",
+        "type": "add"
+      },
+      {
+        "path": "Debug/projects/StudioDanyTV/radio.json",
+        "type": "add"
       }
     ]
   }

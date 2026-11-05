@@ -26,7 +26,16 @@ Private details (IPs, DUID, tokens) live in `.local/` (git-ignored). Dates are a
 - Reference visual: `reference/tv_ambient_v1.html` (pixel clock, Spanish date, Open-Meteo, lofi radio,
   procedural city). Phase 2 builds on it.
 
-## Phase 1 status: DONE (waiting for user feedback)
+## Showcase re-architecture (2026-11-05)
+- Step A: WebGL2 available (Mali-G51). Full-screen procedural shader: 1080p 27-33 fps, 4K 5-10 fps,
+  720p q1 60, 540p q2 60. Decision: GPU background at 720p, upscaled bilinear.
+- Step B: sky pass to texture every 4th frame makes q2 (Milky Way) fit at 720p (60 fps; sky every
+  frame = 46). Sprite layer on a 960x540 canvas scaled 2x by CSS (nearest). Per-pixel cost rules:
+  crop cached-layer draws to their bbox, never touch a 1080p 2D canvas per frame, cache sway frames.
+  Review photos at 06:30/12:00/18:15/23:00 via dev presets (keys 1-4). Known glitch to check: radio
+  label occasionally renders garbled in daytime photos (will-change layers?).
+
+## Phase 1 status: DONE
 Not yet tested: Home-button behaviour while our app is in the foreground (needs a remote press),
 autorun on power-on (phase 2), remote WebSocket control (needs an on-TV pairing prompt, phase 2).
 
