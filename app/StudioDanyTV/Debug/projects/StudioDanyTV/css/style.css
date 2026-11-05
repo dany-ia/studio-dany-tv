@@ -1,38 +1,37 @@
 @font-face{font-family:"PS2P";src:url("../fonts/PressStart2P-Regular.ttf") format("truetype");font-display:block}
 @font-face{font-family:"VT323";src:url("../fonts/VT323-Regular.ttf") format("truetype");font-display:block}
 
-:root{--ink:#e9f2ff;--dim:#9fb3d9;--accent:#ffb347;--glow:#7c5cff;--cyan:#5ef2ff}
+:root{--ink:#fff8ea;--dim:#ffe9c4;--accent:#ffb347;--cyan:#5ef2ff}
 html,body{margin:0;width:100%;height:100%;background:#05060f;overflow:hidden;cursor:none;font-family:"VT323",monospace;color:var(--ink)}
 #scene{position:fixed;left:0;top:0;width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges}
 
 .vignette{position:fixed;left:0;top:0;right:0;bottom:0;z-index:3;pointer-events:none;
-  background:radial-gradient(ellipse at center,rgba(0,0,0,0) 50%,rgba(0,0,0,.55) 100%)}
-.scan{position:fixed;left:0;top:0;right:0;bottom:0;z-index:4;pointer-events:none;opacity:.35;
+  background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(0,0,0,.45) 100%)}
+.scan{position:fixed;left:0;top:0;right:0;bottom:0;z-index:4;pointer-events:none;opacity:.28;
   background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 2px,rgba(0,0,0,0) 2px 4px)}
 
-.hud{position:fixed;left:84px;top:72px;z-index:5;will-change:transform}
-.hud .clock,.hud .date,.hud .weather{text-shadow:0 0 22px rgba(124,92,255,.55),0 0 3px #000}
-.clock{font-family:"PS2P",monospace;font-size:140px;line-height:1;letter-spacing:6px;color:#fff}
-.clock .sec{font-size:44px;color:var(--accent);margin-left:22px;vertical-align:top;position:relative;top:6px;display:inline-block;text-shadow:0 0 3px #000;will-change:transform}
-.date{font-size:50px;margin-top:26px;letter-spacing:3px;text-transform:uppercase;color:var(--ink)}
-.weather{font-size:44px;margin-top:8px;color:var(--dim);display:flex;align-items:center;gap:18px}
-.weather canvas{width:60px;height:60px;image-rendering:pixelated;image-rendering:crisp-edges}
+/* HUD top-left: over the sky, clear of the bar (which sits bottom-right) */
+.hud{position:fixed;left:84px;top:66px;z-index:5;will-change:transform}
+.hud .clock,.hud .date,.hud .weather{text-shadow:0 0 3px #000,0 0 14px rgba(0,0,0,.6)}
+.clock{font-family:"PS2P",monospace;font-size:132px;line-height:1;letter-spacing:6px;color:#fff}
+.clock .sec{font-size:42px;color:var(--accent);margin-left:22px;vertical-align:top;position:relative;top:6px;display:inline-block;will-change:transform}
+.date{font-size:48px;margin-top:24px;letter-spacing:3px;text-transform:uppercase;color:var(--ink)}
+.weather{font-size:42px;margin-top:6px;color:var(--dim)}
 .weather b{color:var(--accent);font-weight:normal}
 
-.radio{position:fixed;left:84px;bottom:64px;z-index:5;will-change:transform;font-size:36px;color:var(--dim);display:flex;align-items:center;gap:18px;text-shadow:0 0 12px rgba(0,0,0,.8)}
-.bars{display:inline-flex;gap:5px;align-items:flex-end;height:32px}
-.bars i{width:7px;height:32px;background:var(--accent);transform:scaleY(.25);transform-origin:bottom;animation:eq 1s infinite ease-in-out;will-change:transform}
+.radio{position:fixed;left:84px;bottom:56px;z-index:5;font-size:34px;color:var(--dim);display:flex;align-items:center;gap:18px;text-shadow:0 0 3px #000,0 0 12px rgba(0,0,0,.7);will-change:transform}
+.bars{display:inline-flex;gap:5px;align-items:flex-end;height:30px}
+.bars i{width:7px;height:30px;background:var(--accent);transform:scaleY(.25);transform-origin:bottom;animation:eq 1s infinite ease-in-out;will-change:transform}
 .bars i:nth-child(2){animation-delay:.22s}.bars i:nth-child(3){animation-delay:.41s}.bars i:nth-child(4){animation-delay:.13s}.bars i:nth-child(5){animation-delay:.33s}
-.bars.off i{animation:none;transform:scaleY(.2);background:#445}
+.bars.off i{animation:none;transform:scaleY(.2);background:#6a5a4a}
 .bars.muted i{animation:none;transform:scaleY(.4);background:#7a6a4a}
-.bars.noanim i{animation:none}
 @keyframes eq{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
 
-.corner{position:fixed;right:84px;bottom:64px;z-index:5;will-change:transform;text-align:right;color:var(--dim);text-shadow:0 0 12px rgba(0,0,0,.8)}
+/* tag top-right, small, above the palapa roof */
+.corner{position:fixed;right:84px;top:72px;z-index:5;text-align:right;color:var(--dim);text-shadow:0 0 3px #000,0 0 12px rgba(0,0,0,.7);will-change:transform}
 .corner .tag{font-family:"PS2P",monospace;font-size:18px;letter-spacing:3px;color:var(--accent)}
-.corner .place{font-size:36px;margin-top:8px}
+.corner .place{font-size:32px;margin-top:8px}
 
-.debug{position:fixed;left:84px;top:440px;z-index:6;margin:0;will-change:transform;font-family:"VT323",monospace;font-size:34px;line-height:1.15;
-  color:#8dffb0;background:rgba(0,0,0,.6);padding:14px 20px;border:2px solid #2d6}
+.dev{position:fixed;left:84px;top:430px;z-index:6;margin:0;font-family:"VT323",monospace;font-size:34px;line-height:1.2;will-change:transform;
+  color:#8dffb0;background:rgba(0,0,0,.65);padding:12px 18px;border:2px solid #2d6}
 .hidden{display:none}
-.novig .vignette,.noscan .scan{display:none}

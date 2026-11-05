@@ -1,7 +1,7 @@
 {
   "deployId": 1,
   "projectDir": "/Users/daniel/Projects/personal/tv-studio/app/StudioDanyTV",
-  "timestamp": "2026-11-05T22:30:12.994Z",
+  "timestamp": "2026-11-05T22:32:17.849Z",
   "hashAlgorithm": "xxh3-128",
   "input": {
     "StudioDanyTV.code-workspace": {
@@ -11,7 +11,7 @@
       "hash": "85ec3b4529948b7ff90cfc911a2a6fae"
     },
     "css/style.css": {
-      "hash": "f5f834273bad05d3a470f2edf69ca6b9"
+      "hash": "fec69e1a458e1272940a0ae10b4ae030"
     },
     "fonts/OFL-PressStart2P.txt": {
       "hash": "c8c388dda2044880f7ab1fd6c70beab3"
@@ -32,7 +32,7 @@
       "hash": "15e9946b444a0dd1758c18ffcd1fef29"
     },
     "js/app.js": {
-      "hash": "109df32973cce5d15bf756e4d42ae748"
+      "hash": "4eeb161c06b831bd9a3a6296809ab538"
     },
     "js/scene.js": {
       "hash": "aaedf782513c0f631b5513d01c16b197"
@@ -46,7 +46,7 @@
       "hash": "85ec3b4529948b7ff90cfc911a2a6fae"
     },
     "Debug/projects/StudioDanyTV/css/style.css": {
-      "hash": "f5f834273bad05d3a470f2edf69ca6b9"
+      "hash": "fec69e1a458e1272940a0ae10b4ae030"
     },
     "Debug/projects/StudioDanyTV/fonts/OFL-PressStart2P.txt": {
       "hash": "c8c388dda2044880f7ab1fd6c70beab3"
@@ -67,7 +67,7 @@
       "hash": "15e9946b444a0dd1758c18ffcd1fef29"
     },
     "Debug/projects/StudioDanyTV/js/app.js": {
-      "hash": "109df32973cce5d15bf756e4d42ae748"
+      "hash": "4eeb161c06b831bd9a3a6296809ab538"
     },
     "Debug/projects/StudioDanyTV/js/scene.js": {
       "hash": "aaedf782513c0f631b5513d01c16b197"

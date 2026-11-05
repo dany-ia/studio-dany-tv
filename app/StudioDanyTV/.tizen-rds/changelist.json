@@ -7,8 +7,20 @@
         "type": "modify"
       },
       {
+        "path": "Debug/projects/StudioDanyTV/index.html",
+        "type": "modify"
+      },
+      {
         "path": "Debug/projects/StudioDanyTV/js/app.js",
         "type": "modify"
+      },
+      {
+        "path": "Debug/projects/StudioDanyTV/js/beach.js",
+        "type": "add"
+      },
+      {
+        "path": "Debug/projects/StudioDanyTV/js/scene.js",
+        "type": "delete"
       }
     ]
   }

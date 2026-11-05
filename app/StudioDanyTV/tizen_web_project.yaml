@@ -31,7 +31,7 @@ files:
   - icon.png
   - index.html
   - js/app.js
-  - js/scene.js
+  - js/beach.js
   - fonts/PressStart2P-Regular.ttf
   - fonts/VT323-Regular.ttf
   - fonts/OFL-PressStart2P.txt

@@ -6,7 +6,7 @@
     <title>Studio Dany TV</title>
     <link rel="stylesheet" type="text/css" href="css/style.css"/>
     <script src="$WEBAPIS/webapis/webapis.js"></script>
-    <script src="js/scene.js"></script>
+    <script src="js/beach.js"></script>
     <script src="js/app.js"></script>
 </head>
 <body>
@@ -17,7 +17,7 @@
     <div class="hud">
         <div class="clock"><span id="hm">00:00</span><span class="sec" id="ss">00</span></div>
         <div class="date" id="date">&nbsp;</div>
-        <div class="weather"><canvas id="wxicon" width="12" height="12"></canvas><span id="wx">cargando clima…</span></div>
+        <div class="weather" id="wx">cargando clima…</div>
     </div>
 
     <div class="radio">
@@ -29,7 +29,7 @@
         <div class="place">Playa del Carmen · MX</div>
     </div>
 
-    <pre id="debug" class="debug hidden"></pre>
+    <pre id="dev" class="dev hidden"></pre>
     <audio id="radio" preload="none"></audio>
 </body>
 </html>
