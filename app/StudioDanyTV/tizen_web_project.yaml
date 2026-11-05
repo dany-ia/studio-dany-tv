@@ -32,6 +32,9 @@ files:
   - index.html
   - js/app.js
   - js/beach.js
+  - js/gl.js
+  - js/shaders.js
+  - js/scene.js
   - fonts/PressStart2P-Regular.ttf
   - fonts/VT323-Regular.ttf
   - fonts/OFL-PressStart2P.txt

@@ -1,6 +1,6 @@
 {
   "projectDir": "/Users/daniel/Projects/personal/tv-studio/app/StudioDanyTV",
-  "timestamp": "2026-11-05T22:38:58.642Z",
+  "timestamp": "2026-11-05T22:47:56.984Z",
   "hashAlgorithm": "xxh3-128",
   "input": {
     "StudioDanyTV.code-workspace": {
@@ -28,13 +28,22 @@
       "hash": "1a426fbb8d27a3d3d797ae8415546bde"
     },
     "index.html": {
-      "hash": "dbcafabfd369145385348bb5bd4fd7a7"
+      "hash": "5af6d1ae3f6059c1de600b7901415bce"
     },
     "js/app.js": {
-      "hash": "13833659c344cf9f70a267be308b6b88"
+      "hash": "17bf4ebee4e4ccfaeb04fdd375d42c0a"
     },
     "js/beach.js": {
       "hash": "1e2c363a78a81475ec66107f26dbb822"
+    },
+    "js/gl.js": {
+      "hash": "d8f1cfb7e992fd38b58b34a78c51e871"
+    },
+    "js/scene.js": {
+      "hash": "0d08ba97ac36dbd7840bf3095a27e1fc"
+    },
+    "js/shaders.js": {
+      "hash": "4a1c4ee9e49a9000d4276a76c7d9cb4e"
     }
   },
   "output": {
@@ -63,13 +72,22 @@
       "hash": "1a426fbb8d27a3d3d797ae8415546bde"
     },
     "Debug/projects/StudioDanyTV/index.html": {
-      "hash": "dbcafabfd369145385348bb5bd4fd7a7"
+      "hash": "5af6d1ae3f6059c1de600b7901415bce"
     },
     "Debug/projects/StudioDanyTV/js/app.js": {
-      "hash": "13833659c344cf9f70a267be308b6b88"
+      "hash": "17bf4ebee4e4ccfaeb04fdd375d42c0a"
     },
     "Debug/projects/StudioDanyTV/js/beach.js": {
       "hash": "1e2c363a78a81475ec66107f26dbb822"
+    },
+    "Debug/projects/StudioDanyTV/js/gl.js": {
+      "hash": "d8f1cfb7e992fd38b58b34a78c51e871"
+    },
+    "Debug/projects/StudioDanyTV/js/scene.js": {
+      "hash": "0d08ba97ac36dbd7840bf3095a27e1fc"
+    },
+    "Debug/projects/StudioDanyTV/js/shaders.js": {
+      "hash": "4a1c4ee9e49a9000d4276a76c7d9cb4e"
     }
   }
 }

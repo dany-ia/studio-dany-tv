@@ -9,7 +9,8 @@
       { name: "groove salad · somafm", url: "https://ice1.somafm.com/groovesalad-128-mp3" },
       { name: "fluid · somafm", url: "https://ice1.somafm.com/fluid-128-mp3" }
     ],
-    devOnStart: true            // show the dev/fps overlay at launch (0 key toggles it)
+    devOnStart: true,           // show the dev/fps overlay at launch (0 key toggles it)
+    benchOnStart: true          // step A: run the resolution/quality benchmark 5 s after launch
   };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -120,11 +121,13 @@
   }
   function devRender() {
     if (!window.DEV.on) return;
-    var D = window.DEV, S = sceneState(), f = Beach.fps, z = Beach.size();
+    var D = window.DEV, S = sceneState(), f = Scene.fps, z = Scene.size(), I = Scene.info;
     var vals = [S.hour.toFixed(1) + "h", S.code + " " + (WX[S.code] || ""), MESES[S.month - 1].slice(0, 3), S.day, Math.round(S.wind) + "km/h"];
     var line = "";
     for (var i = 0; i < FIELDS.length; i++) line += (i === D.field ? "[" : " ") + FIELDS[i] + " " + vals[i] + (i === D.field ? "]" : " ") + " ";
-    $("dev").textContent = "FPS " + f.value + " (peor " + f.worst + " ms)  canvas " + z.lw + "x" + z.lh + "→" + z.w + "x" + z.h + "\n" +
+    $("dev").textContent = "FPS " + f.value + " (peor " + f.worst + " ms)  " + z.w + "x" + z.h + " q" + z.q + "  " + I.gl + "\n" +
+      "gpu " + I.renderer + "\n" +
+      "bench " + (I.bench || "…") + "\n" +
       line + "\n◄► campo  ▲▼ valor  ROJO reset  0 cerrar   sol " + window.ENV.sunrise.toFixed(2) + " / " + window.ENV.sunset.toFixed(2);
   }
 
@@ -153,10 +156,11 @@
     tick(); setInterval(tick, 1000);
     registerKeys(); document.addEventListener("keydown", onKey);
     try { webapis.appcommon.setScreenSaver(webapis.appcommon.AppCommonScreenSaverState.SCREEN_SAVER_OFF); } catch (e) {}
-    Beach.start($("scene"), 1920, 1080);      // measured on the TV: 1080p canvas = 60 fps, 4K canvas = 17 fps
+    var ok = Scene.start($("scene"));
     weather(); setInterval(weather, CFG.weatherEveryMs);
     radioInit();
     if (CFG.devOnStart) { window.DEV.on = true; $("dev").classList.remove("hidden"); }
     setInterval(devRender, 500);
+    if (ok && CFG.benchOnStart) setTimeout(function () { Scene.bench(); }, 5000);
   };
 })();
