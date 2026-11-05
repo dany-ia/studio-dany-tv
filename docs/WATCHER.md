@@ -5,13 +5,13 @@ Lets the agent see the real TV through your phone. LAN only, HTTPS, no tunnel.
 ## Start / stop
 ```bash
 python3 watcher/phonecam.py start          # generates a local CA + cert on first run, prints the pairing link
-python3 watcher/phonecam.py newpair        # fresh single-use link (10 min), QR at .local/watcher/pair-qr.png
+python3 watcher/phonecam.py newpair        # fresh single-use link (30 min), QR at .local/watcher/pair-qr.png
 python3 watcher/phonecam.py stop           # revokes sessions, deletes frames and pairing state
 ```
 Then `open .local/watcher/pair-qr.png` and scan it with the phone.
 
 ## Security model
-- Pairing link: random token, single use, 10 minute expiry, exchanged for a session cookie
+- Pairing link: random token, single use, 30 minute expiry, exchanged for a session cookie
   (`Secure; HttpOnly; SameSite=Strict`, 6 h). Tokens are stored hashed, never logged.
 - `/frame` and `/stop` require the session. `/status` and `/latest.jpg` answer only to 127.0.0.1.
 - Only the last 3 frames are kept, under `.local/watcher/frames/` (git-ignored). `stop` deletes them.

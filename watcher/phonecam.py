@@ -25,7 +25,7 @@ STATE = REPO / ".local" / "watcher"
 CERTS = STATE / "certs"
 FRAMES = STATE / "frames"
 RING = 3                      # keep the last N frames
-PAIR_TTL = 600                # pairing link valid 10 minutes, single use
+PAIR_TTL = 1800               # pairing link valid 30 minutes, single use
 SESSION_TTL = 6 * 3600        # camera session valid 6 hours
 
 # ----------------------------------------------------------------------------- certs
@@ -254,6 +254,8 @@ class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         u = urlparse(self.path); q = parse_qs(u.query)
         if u.path == "/pair":
+            if STORE.valid(self.cookie()):   # already paired on this phone: just go to the camera page
+                return self.send(303, "", extra={"Location": "/cam"})
             tok = (q.get("t") or [""])[0]
             cookie = STORE.redeem(tok)
             if not cookie: return self.send(403, LANDING_HTML)
