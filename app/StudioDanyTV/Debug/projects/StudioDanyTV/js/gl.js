@@ -1,5 +1,5 @@
 /* gl.js — tiny WebGL helper: context (WebGL2 preferred, WebGL1 fallback), shader compile,
-   one full-screen triangle, uniform setters. No dependencies. */
+   one full-screen triangle program, render-to-texture targets. No dependencies. */
 (function (global) {
   "use strict";
 
@@ -24,7 +24,7 @@
     return s;
   }
 
-  /* A program drawing one full-screen triangle; `frag` gets v_uv in [0,1] (y up). */
+  /* A program drawing one full-screen triangle; the fragment shader gets v_uv in [0,1] (y up). */
   function fullscreenProgram(gl, frag) {
     var vert = "attribute vec2 a_pos; varying vec2 v_uv; void main(){ v_uv = a_pos * 0.5 + 0.5; gl_Position = vec4(a_pos, 0.0, 1.0); }";
     var p = gl.createProgram();
@@ -40,10 +40,24 @@
       u: function (name) { if (!(name in uniforms)) uniforms[name] = gl.getUniformLocation(p, name); return uniforms[name]; },
       set1f: function (n, v) { var l = this.u(n); if (l) gl.uniform1f(l, v); },
       set2f: function (n, a, b) { var l = this.u(n); if (l) gl.uniform2f(l, a, b); },
-      set3f: function (n, a, b, c) { var l = this.u(n); if (l) gl.uniform3f(l, a, b, c); },
+      set1i: function (n, v) { var l = this.u(n); if (l) gl.uniform1i(l, v); },
       draw: function () { gl.drawArrays(gl.TRIANGLES, 0, 3); }
     };
   }
 
-  global.GLH = { create: create, fullscreenProgram: fullscreenProgram };
+  /* Render target: RGB texture + framebuffer, linear filtering, clamped. */
+  function renderTarget(gl, w, h) {
+    var tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, w, h, 0, gl.RGB, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    var fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    var ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.bindTexture(gl.TEXTURE_2D, null);
+    return { tex: tex, fb: fb, w: w, h: h, ok: ok,
+      dispose: function () { gl.deleteFramebuffer(fb); gl.deleteTexture(tex); } };
+  }
+
+  global.GLH = { create: create, fullscreenProgram: fullscreenProgram, renderTarget: renderTarget };
 })(window);

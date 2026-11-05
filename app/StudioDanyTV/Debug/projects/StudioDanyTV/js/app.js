@@ -1,4 +1,4 @@
-/* Studio Dany TV — HUD: clock, Spanish date, Open-Meteo weather, lofi radio, remote keys, dev overlay. */
+/* app.js — HUD (clock, Spanish date, Open-Meteo weather, lofi radio), remote keys, dev overlay. */
 (function () {
   "use strict";
 
@@ -10,7 +10,7 @@
       { name: "fluid · somafm", url: "https://ice1.somafm.com/fluid-128-mp3" }
     ],
     devOnStart: true,           // show the dev/fps overlay at launch (0 key toggles it)
-    benchOnStart: true          // step A: run the resolution/quality benchmark 5 s after launch
+    benchOnStart: false         // run the resolution/quality benchmark 5 s after launch (measurement runs only)
   };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -20,7 +20,7 @@
 
   // shared environment for the scene (window.ENV) and dev overrides (window.DEV)
   window.ENV = { sunrise: 6.5, sunset: 18.1, code: 0, wind: 10, isDay: 1 };
-  window.DEV = { on: false, field: 0, hour: null, code: null, month: null, day: null, wind: null };
+  window.DEV = { on: false, field: 0, hour: null, code: null, month: null, day: null, wind: null, q: 2, res: 720, sky: 4 };
 
   // ---------- clock ----------
   function tick() {
@@ -48,6 +48,7 @@
     window.ENV.code = c.weather_code; window.ENV.wind = c.wind_speed_10m; window.ENV.isDay = c.is_day;
     var sr = hourOf(d.sunrise[0]), ss = hourOf(d.sunset[0]);
     if (sr > 0 && ss > sr) { window.ENV.sunrise = sr; window.ENV.sunset = ss; }
+    if (window.Scene) Scene.skyDirty = true;
   }
   function weather() {
     var url = "https://api.open-meteo.com/v1/forecast?latitude=" + CFG.lat + "&longitude=" + CFG.lon +
@@ -103,49 +104,60 @@
     play();
   }
 
-  // ---------- dev overlay (0 key): force hour / weather code / month / day / wind ----------
+  // ---------- dev overlay (0 key) ----------
+  // fields: hour / weather code / month / day / wind (scene overrides) + quality / resolution / sky rate (live switches)
   var CODES = [0, 1, 2, 3, 45, 51, 61, 63, 65, 80, 82, 95];
-  var FIELDS = ["hora", "clima", "mes", "día", "viento"];
+  var FIELDS = ["hora", "clima", "mes", "día", "viento", "calidad", "res", "cielo"];
+  var RES = [540, 720, 1080], SKY = [1, 2, 4];
+  var PRESETS = { 49: 6.5, 50: 12.0, 51: 18.25, 52: 23.0 };     // keys 1-4 jump to review hours; 5 clears
   function devAdjust(dir) {
-    var D = window.DEV, S = sceneState();
-    if (D.field === 0) { D.hour = ((D.hour == null ? Math.floor(S.hour) : D.hour) + dir * 0.5 + 24) % 24; }
-    if (D.field === 1) { var i = Math.max(0, CODES.indexOf(D.code == null ? S.code : D.code)); D.code = CODES[(i + dir + CODES.length) % CODES.length]; }
-    if (D.field === 2) { D.month = (((D.month == null ? S.month : D.month) - 1 + dir + 12) % 12) + 1; }
-    if (D.field === 3) { D.day = (((D.day == null ? S.day : D.day) - 1 + dir + 31) % 31) + 1; }
-    if (D.field === 4) { D.wind = Math.max(0, (D.wind == null ? S.wind : D.wind) + dir * 5); }
-  }
-  function sceneState() {
-    var E = window.ENV, D = window.DEV, d = new Date();
-    return { hour: D.hour != null ? D.hour : d.getHours() + d.getMinutes() / 60, code: D.code != null ? D.code : E.code,
-             month: D.month != null ? D.month : d.getMonth() + 1, day: D.day != null ? D.day : d.getDate(), wind: D.wind != null ? D.wind : E.wind };
+    var D = window.DEV, S = Scene.state();
+    if (D.field === 0) D.hour = ((D.hour == null ? Math.floor(S.hour) : D.hour) + dir * 0.5 + 24) % 24;
+    if (D.field === 1) { var i = Math.max(0, CODES.indexOf(S.code)); D.code = CODES[(i + dir + CODES.length) % CODES.length]; }
+    if (D.field === 2) D.month = ((S.month - 1 + dir + 12) % 12) + 1;
+    if (D.field === 3) D.day = ((S.day - 1 + dir + 31) % 31) + 1;
+    if (D.field === 4) D.wind = Math.max(0, S.wind + dir * 5);
+    if (D.field === 5) { D.q = (D.q + dir + 3) % 3; Scene.setQuality(D.q); }
+    if (D.field === 6) { D.res = RES[(RES.indexOf(D.res) + dir + 3) % 3]; Scene.setRes(D.res * 16 / 9, D.res); }
+    if (D.field === 7) { D.sky = SKY[(SKY.indexOf(D.sky) + dir + 3) % 3]; Scene.setSkyEvery(D.sky); }
+    Scene.skyDirty = true;
   }
   function devRender() {
     if (!window.DEV.on) return;
-    var D = window.DEV, S = sceneState(), f = Scene.fps, z = Scene.size(), I = Scene.info;
-    var vals = [S.hour.toFixed(1) + "h", S.code + " " + (WX[S.code] || ""), MESES[S.month - 1].slice(0, 3), S.day, Math.round(S.wind) + "km/h"];
+    var D = window.DEV, S = Scene.state(), f = Scene.fps, z = Scene.size(), I = Scene.info;
+    var vals = [S.hour.toFixed(1) + "h", S.code + " " + (WX[S.code] || ""), MESES[S.month - 1].slice(0, 3), S.day, Math.round(S.wind) + "km/h", "q" + z.q, z.h + "p", "1/" + z.s];
     var line = "";
     for (var i = 0; i < FIELDS.length; i++) line += (i === D.field ? "[" : " ") + FIELDS[i] + " " + vals[i] + (i === D.field ? "]" : " ") + " ";
-    $("dev").textContent = "FPS " + f.value + " (peor " + f.worst + " ms)  " + z.w + "x" + z.h + " q" + z.q + "  " + I.gl + "\n" +
-      "gpu " + I.renderer + "\n" +
+    $("dev").textContent = "FPS " + f.value + " (peor " + f.worst + " ms)  bg " + z.w + "x" + z.h + " q" + z.q + " cielo 1/" + z.s + "  " + I.gl + "  gpu " + I.renderer.slice(0, 22) + "\n" +
       "bench " + (I.bench || "…") + "\n" +
-      line + "\n◄► campo  ▲▼ valor  ROJO reset  0 cerrar   sol " + window.ENV.sunrise.toFixed(2) + " / " + window.ENV.sunset.toFixed(2);
+      line + "\n◄► campo  ▲▼ valor  1-4 horas 06:30/12:00/18:15/23:00  5 hora real  ROJO reset  0 cerrar   sol " + window.ENV.sunrise.toFixed(2) + "/" + window.ENV.sunset.toFixed(2);
   }
 
   // ---------- keys ----------
-  var KEY = { ENTER: 13, RETURN: 10009, PLAYPAUSE: 10252, PLAY: 415, PAUSE: 19, RED: 403, GREEN: 404, YELLOW: 405, BLUE: 406, LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ZERO: 48 };
+  var KEY = { ENTER: 13, RETURN: 10009, PLAYPAUSE: 10252, PLAY: 415, PAUSE: 19, RED: 403, LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ZERO: 48, FIVE: 53 };
   function registerKeys() {
     var names = ["MediaPlayPause", "MediaPlay", "MediaPause", "ColorF0Red", "ColorF1Green", "ColorF2Yellow", "ColorF3Blue", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
     for (var i = 0; i < names.length; i++) { try { tizen.tvinputdevice.registerKey(names[i]); } catch (e) {} }
   }
+  function clearOverrides() { var D = window.DEV; D.hour = D.code = D.month = D.day = D.wind = null; Scene.skyDirty = true; $("devmark").classList.add("hidden"); }
+  function hasOverrides() { var D = window.DEV; return D.hour != null || D.code != null || D.month != null || D.day != null || D.wind != null; }
+  var hideTimer = null;
   function onKey(e) {
     var k = e.keyCode, D = window.DEV;
-    if (k === KEY.ZERO) { D.on = !D.on; $("dev").classList.toggle("hidden", !D.on); if (!D.on) { D.hour = D.code = D.month = D.day = D.wind = null; } return; }
-    if (D.on) {
+    if (k === KEY.ZERO) {                       // 0: show/hide the overlay. Forced states survive hiding (for photos) and auto-clear after 10 min.
+      D.on = !D.on; $("dev").classList.toggle("hidden", !D.on); clearTimeout(hideTimer);
+      if (!D.on && hasOverrides()) { $("devmark").classList.remove("hidden"); hideTimer = setTimeout(clearOverrides, 10 * 60 * 1000); }
+      if (D.on) $("devmark").classList.add("hidden");
+      return;
+    }
+    if (D.on || hasOverrides()) {
       if (k === KEY.LEFT) { D.field = (D.field + FIELDS.length - 1) % FIELDS.length; devRender(); return; }
       if (k === KEY.RIGHT) { D.field = (D.field + 1) % FIELDS.length; devRender(); return; }
       if (k === KEY.UP) { devAdjust(1); devRender(); return; }
       if (k === KEY.DOWN) { devAdjust(-1); devRender(); return; }
-      if (k === KEY.RED) { D.hour = D.code = D.month = D.day = D.wind = null; devRender(); return; }
+      if (k === KEY.RED) { clearOverrides(); devRender(); return; }
+      if (PRESETS[k] != null) { D.hour = PRESETS[k]; Scene.skyDirty = true; devRender(); return; }
+      if (k === KEY.FIVE) { D.hour = null; Scene.skyDirty = true; devRender(); return; }
     }
     if (k === KEY.ENTER || k === KEY.PLAYPAUSE || k === KEY.PLAY || k === KEY.PAUSE) { toggleRadio(); e.preventDefault(); }
     else if (k === KEY.RETURN) { try { tizen.application.getCurrentApplication().exit(); } catch (err) {} }
@@ -156,7 +168,8 @@
     tick(); setInterval(tick, 1000);
     registerKeys(); document.addEventListener("keydown", onKey);
     try { webapis.appcommon.setScreenSaver(webapis.appcommon.AppCommonScreenSaverState.SCREEN_SAVER_OFF); } catch (e) {}
-    var ok = Scene.start($("scene"));
+    Sprites.start($("fg"));
+    var ok = Scene.start($("bg"));
     weather(); setInterval(weather, CFG.weatherEveryMs);
     radioInit();
     if (CFG.devOnStart) { window.DEV.on = true; $("dev").classList.remove("hidden"); }

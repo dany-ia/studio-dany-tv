@@ -1,23 +1,22 @@
-/* shaders.js — GLSL ES 1.00 sources (run on both WebGL2 and WebGL1).
-   SKYSEA: sky + sea + sand background in one pass. The math, in short:
-   - Time of day comes in as u_hour plus the real u_sunrise/u_sunset (hours). `df` = fraction of the
-     day elapsed between sunrise and sunset, `nf` = fraction of the night. The light elevation
-     `elev` is sin(pi*df) by day and -sin(pi*nf) by night, so it crosses 0 exactly at sunrise/sunset.
-   - `d` (daylight, 0..1) and `tw` (twilight bump, peaking at elev=0) blend three palettes:
-     night, twilight (pink/orange horizon) and day.
-   - Stars: a hash per screen cell, a few bright ones twinkle with time; Milky Way is a rotated
-     band of fbm noise. Both fade with daylight.
-   - Clouds: fbm noise sampled in perspective (divide by height above horizon) so they flatten
-     toward the horizon; drift speed follows wind; coverage threshold follows the weather.
-   - Sea: palette from deep to shallow by distance to shore, sky reflection near the horizon,
-     wave shading from fbm in perspective, specular glints concentrated in a path below the
-     sun/moon, and a foam band at a wavy shore line.
-   - u_quality 0/1 switches fbm octaves (2 vs 5) and the Milky Way; used by the benchmark. */
+/* shaders.js — GLSL ES 1.00 sources (valid on WebGL2 and WebGL1).
+
+   Two passes share one prelude (uniforms, noise, light state):
+
+   SKY  -> rendered into a texture every N frames (the sky changes slowly). Time-of-day gradient,
+           sun/moon disc with glow, stars with twinkle, Milky Way band, perspective fbm clouds.
+   MAIN -> rendered every frame. Above the horizon it just samples the sky texture; the sea is
+           computed per frame (layered waves, Caribbean palette, glint path under the light,
+           foam at a wavy shore line) and reflects the real sky color sampled just above the horizon.
+
+   Light model: `df` = fraction of daytime elapsed (0 at sunrise, 1 at sunset), `nf` = fraction of
+   the night. Light elevation `elev` = sin(pi*df) by day, -sin(pi*nf) by night, so it crosses 0 at
+   sunrise/sunset. `d` = daylight amount (smoothstep of elev), `tw` = twilight bump peaking at
+   elev = 0. Sun and moon travel on arcs from left to right. */
 (function (global) {
   "use strict";
-  global.SHADERS = {};
+  var S = global.SHADERS = {};
 
-  global.SHADERS.SKYSEA = [
+  var PRE = [
     "#ifdef GL_FRAGMENT_PRECISION_HIGH",
     "precision highp float;",
     "#else",
@@ -37,31 +36,43 @@
     "  return mix(mix(a,b,f.x), mix(c,d,f.x), f.y); }",
     "float fbm(vec2 p, int oct){ float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { if (i >= oct) break; v += a*noise(p); p = p*2.03 + 17.1; a *= 0.5; } return v; }",
     "",
+    "/* light state shared by both passes */",
+    "float g_elev, g_d, g_tw, g_df, g_nf; bool g_isDay; vec2 g_sun, g_moon; vec3 g_sunCol;",
+    "void lightState(float asp){",
+    "  float dayLen = u_sunset - u_sunrise; g_df = (u_hour - u_sunrise) / dayLen;",
+    "  float nightLen = 24.0 - dayLen; g_nf = (u_hour < u_sunrise) ? (u_hour + 24.0 - u_sunset) / nightLen : (u_hour - u_sunset) / nightLen;",
+    "  g_isDay = (g_df >= 0.0 && g_df <= 1.0);",
+    "  g_elev = g_isDay ? sin(PI*g_df) : -sin(PI*clamp(g_nf,0.0,1.0));",
+    "  g_d = smoothstep(-0.10, 0.28, g_elev);",
+    "  g_tw = exp(-pow(g_elev/0.16, 2.0));",
+    "  float cdf = clamp(g_df,0.0,1.0), cnf = clamp(g_nf,0.0,1.0);",
+    "  /* arcs end at the tiki bar's left edge (x~0.62) so sunsets and the moon path stay visible */",
+    "  g_sun = vec2(mix(0.12, 0.62, cdf)*asp, HOR + 0.52*sin(PI*cdf));",
+    "  g_moon = vec2(mix(0.15, 0.60, cnf)*asp, HOR + 0.46*sin(PI*cnf));",
+    "  g_sunCol = mix(vec3(1.0,0.55,0.25), vec3(1.0,0.95,0.80), g_d);",
+    "}",
+    ""
+  ].join("\n");
+
+  S.SKY = PRE + [
     "void main(){",
     "  vec2 uv = v_uv; float asp = u_res.x / u_res.y; vec2 p = vec2(uv.x*asp, uv.y);",
-    "  int oct = u_quality > 1.5 ? 5 : (u_quality > 0.5 ? 3 : 2);   /* quality tiers 0/1/2 */",
-    "  /* ---- light: sun by day, moon by night ---- */",
-    "  float dayLen = u_sunset - u_sunrise; float df = (u_hour - u_sunrise) / dayLen;",
-    "  float nightLen = 24.0 - dayLen; float nf = (u_hour < u_sunrise) ? (u_hour + 24.0 - u_sunset) / nightLen : (u_hour - u_sunset) / nightLen;",
-    "  bool isDay = (df >= 0.0 && df <= 1.0);",
-    "  float elev = isDay ? sin(PI*df) : -sin(PI*clamp(nf,0.0,1.0));",
-    "  float d = smoothstep(-0.10, 0.28, elev);                 /* daylight 0..1 */",
-    "  float tw = exp(-pow(elev/0.16, 2.0));                    /* twilight bump */",
-    "  vec2 sunPos = vec2(mix(0.10, 0.90, clamp(df,0.0,1.0))*asp, HOR + 0.52*sin(PI*clamp(df,0.0,1.0)));",
-    "  vec2 moonPos = vec2(mix(0.15, 0.85, clamp(nf,0.0,1.0))*asp, HOR + 0.46*sin(PI*clamp(nf,0.0,1.0)));",
-    "  /* ---- sky palette ---- */",
+    "  lightState(asp);",
+    "  int oct = u_quality > 1.5 ? 5 : (u_quality > 0.5 ? 3 : 2);",
+    "  float d = g_d, tw = g_tw, elev = g_elev;",
+    "  /* palette: night / twilight / day, blended by daylight and the twilight bump */",
     "  float h = clamp((uv.y - HOR) / (1.0 - HOR), 0.0, 1.0);",
     "  vec3 top = mix(vec3(0.015,0.025,0.09), vec3(0.14,0.45,0.86), d);",
     "  vec3 hor = mix(vec3(0.05,0.08,0.20), vec3(0.70,0.87,0.98), d);",
     "  top = mix(top, vec3(0.22,0.13,0.42), tw*0.85); hor = mix(hor, vec3(1.0,0.52,0.28), tw);",
     "  vec3 sky = mix(hor, top, pow(h, 0.55));",
-    "  /* sun: glow + disc (only above the horizon) */",
-    "  float sd = distance(p, sunPos); float sunUp = smoothstep(-0.06, 0.02, elev);",
-    "  vec3 sunCol = mix(vec3(1.0,0.55,0.25), vec3(1.0,0.95,0.80), d);",
-    "  sky += sunCol * sunUp * (exp(-sd*7.0)*0.55 + exp(-sd*2.2)*0.22*(1.0+1.5*tw));",
-    "  sky = mix(sky, vec3(1.0,0.98,0.90), sunUp * smoothstep(0.032, 0.028, sd));",
-    "  /* stars + Milky Way (night) */",
-    "  float night = smoothstep(0.03, -0.10, elev);           /* stars only once the sun is really down */",
+    "  /* sun: soft non-saturating glow (mix, not add) + small warm disc */",
+    "  float sd = distance(p, g_sun); float sunUp = smoothstep(-0.06, 0.02, elev);",
+    "  float glow = 0.55*exp(-sd*11.0) + 0.22*exp(-sd*3.2)*(1.0 + 0.8*tw) + 0.10*exp(-sd*1.2)*tw;",
+    "  sky = mix(sky, g_sunCol, clamp(glow, 0.0, 0.85) * sunUp);",
+    "  sky = mix(sky, vec3(1.0,0.97,0.88), sunUp * smoothstep(0.030, 0.024, sd));",
+    "  /* stars + Milky Way, only once the sun is really down */",
+    "  float night = smoothstep(0.03, -0.10, elev);",
     "  if (night > 0.02 && uv.y > HOR) {",
     "    vec2 gp = p * 150.0; vec2 id = floor(gp); float r = hash(id);",
     "    float star = step(0.975, r) * smoothstep(0.35, 0.0, length(fract(gp) - 0.5)) * (0.55 + 0.45*sin(u_time*(2.0+r*4.0) + r*90.0));",
@@ -76,13 +87,13 @@
     "  /* moon with phase: lit disc minus an offset dark disc */",
     "  float moonUp = smoothstep(0.02, 0.10, -elev);",
     "  if (moonUp > 0.0) {",
-    "    float md = distance(p, moonPos); float k = cos(u_moon * 2.0*PI);   /* -1 new .. +1 full */",
+    "    float md = distance(p, g_moon); float k = cos(u_moon * 2.0*PI);   /* -1 new .. +1 full */",
     "    float disc = smoothstep(0.030, 0.027, md);",
-    "    float shade = smoothstep(0.034, 0.031, distance(p, moonPos + vec2(0.045*(1.0-k)*sign(0.5-u_moon), 0.0)));",
+    "    float shade = smoothstep(0.034, 0.031, distance(p, g_moon + vec2(0.045*(1.0-k)*sign(0.5-u_moon), 0.0)));",
     "    float lit = disc * (1.0 - shade*(1.0-smoothstep(0.9,1.0,k)));",
     "    sky += vec3(0.95,0.97,1.0) * lit * moonUp + vec3(0.5,0.6,0.9) * exp(-md*9.0) * 0.35 * moonUp * (0.4 + 0.6*k);",
     "  }",
-    "  /* clouds: fbm in perspective above the horizon */",
+    "  /* clouds: fbm in perspective, drifting with the wind, coverage from the weather */",
     "  if (uv.y > HOR) {",
     "    float hh = max(h, 0.06);",
     "    vec2 cp = vec2((uv.x - 0.5)*asp / hh * 0.55 + u_time*(0.006 + u_wind*0.0008), 0.45 / hh);",
@@ -93,9 +104,20 @@
     "    vec3 cloudCol = mix(shd, lit, smoothstep(0.55, 0.95, c));",
     "    sky = mix(sky, cloudCol, cov * 0.92);",
     "  }",
-    "  vec3 col = sky;",
-    "  /* ---- sea ---- */",
-    "  if (uv.y <= HOR && uv.y > SHORE) {",
+    "  gl_FragColor = vec4(sky, 1.0);",
+    "}"
+  ].join("\n");
+
+  S.MAIN = PRE + [
+    "uniform sampler2D u_sky;",
+    "void main(){",
+    "  vec2 uv = v_uv; float asp = u_res.x / u_res.y; vec2 p = vec2(uv.x*asp, uv.y);",
+    "  lightState(asp);",
+    "  int oct = u_quality > 1.5 ? 5 : (u_quality > 0.5 ? 3 : 2);",
+    "  float d = g_d, tw = g_tw;",
+    "  vec3 col;",
+    "  if (uv.y > HOR) { col = texture2D(u_sky, uv).rgb; }",
+    "  else if (uv.y > SHORE) {",
     "    float depth = (HOR - uv.y) / (HOR - SHORE);        /* 0 horizon .. 1 shore */",
     "    float persp = depth + 0.06;",
     "    vec2 wp = vec2((uv.x - 0.5)*asp / persp, 1.0 / persp);",
@@ -103,11 +125,16 @@
     "    vec3 deep = vec3(0.02,0.28,0.46), mid = vec3(0.08,0.66,0.72), shallow = vec3(0.50,0.90,0.86);",
     "    vec3 sea = mix(deep, mid, smoothstep(0.0, 0.55, depth)); sea = mix(sea, shallow, smoothstep(0.55, 1.0, depth));",
     "    sea *= mix(0.22, 1.0, d);",
-    "    sea = mix(sea, hor*0.85, pow(1.0 - depth, 3.0) * 0.65);            /* sky reflection at the horizon */",
-    "    sea += (w - 0.5) * (0.10 + 0.08*u_wind*0.05);                      /* wave shading, more with wind */",
+    "    /* reflection: the real sky just above the horizon, desaturated so twilight does not turn the sea pink */",
+    "    vec3 horCol = texture2D(u_sky, vec2(uv.x, HOR + 0.012)).rgb;",
+    "    horCol = mix(horCol, vec3(dot(horCol, vec3(0.33, 0.5, 0.17))), 0.45) * 0.85;",
+    "    sea = mix(sea, horCol, pow(1.0 - depth, 3.0) * 0.5);",
+    "    sea += (w - 0.5) * (0.10 + 0.08*u_wind*0.05);",
     "    /* glint path below the light source */",
-    "    float lx = isDay ? sunPos.x : moonPos.x; float lightOn = isDay ? sunUp : moonUp;",
-    "    vec3 lightCol = isDay ? sunCol : vec3(0.75,0.82,1.0);",
+    "    float lx = g_isDay ? g_sun.x : g_moon.x;",
+    "    float sunUp = smoothstep(-0.06, 0.02, g_elev), moonUp = smoothstep(0.02, 0.10, -g_elev);",
+    "    float lightOn = g_isDay ? sunUp : moonUp;",
+    "    vec3 lightCol = g_isDay ? g_sunCol : vec3(0.75,0.82,1.0);",
     "    float path = exp(-pow((p.x - lx) * 2.2 / (0.35 + depth), 2.0));",
     "    float glint = pow(max(0.0, fbm(wp*vec2(7.0, 18.0) + vec2(u_time*0.35, u_time*0.9), 2) - 0.42) * 2.6, 3.0);",
     "    sea += lightCol * glint * path * lightOn * (0.9 + 1.6*(1.0-d) + 1.2*tw);",
@@ -117,13 +144,10 @@
     "    foam += smoothstep(0.08, 0.0, uv.y - edge) * 0.25 * step(0.6, noise(vec2(uv.x*45.0 + u_time*0.3, uv.y*120.0)));",
     "    sea = mix(sea, vec3(0.96,1.0,1.0) * mix(0.35, 1.0, d), clamp(foam, 0.0, 1.0) * 0.9);",
     "    col = sea;",
-    "  }",
-    "  /* ---- sand (placeholder: the sprite layer draws the beach in step B) ---- */",
-    "  if (uv.y <= SHORE) {",
+    "  } else {",
+    "    /* sand base (the sprite layer draws the detailed beach on top) */",
     "    float wet = smoothstep(0.0, 0.05, SHORE - uv.y);",
-    "    vec3 sand = mix(vec3(0.78,0.68,0.50), vec3(0.95,0.88,0.70), wet) * mix(0.25, 1.0, d);",
-    "    sand += (noise(p*400.0) - 0.5) * 0.04;",
-    "    col = sand;",
+    "    col = mix(vec3(0.78,0.68,0.50), vec3(0.95,0.88,0.70), wet) * mix(0.25, 1.0, d);",
     "  }",
     "  gl_FragColor = vec4(col, 1.0);",
     "}"
