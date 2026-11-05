@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>Studio Dany TV</title>
+    <link rel="stylesheet" type="text/css" href="css/style.css"/>
+    <script src="$WEBAPIS/webapis/webapis.js"></script>
+    <script src="js/scene.js"></script>
+    <script src="js/app.js"></script>
+</head>
+<body>
+    <canvas id="scene"></canvas>
+    <div class="vignette"></div>
+    <div class="scan"></div>
+
+    <div class="hud">
+        <div class="clock"><span id="hm">00:00</span><span class="sec" id="ss">00</span></div>
+        <div class="date" id="date">&nbsp;</div>
+        <div class="weather"><canvas id="wxicon" width="12" height="12"></canvas><span id="wx">cargando clima…</span></div>
+    </div>
+
+    <div class="radio">
+        <span class="bars off" id="bars"><i></i><i></i><i></i><i></i><i></i></span>
+        <span id="radioLabel">lofi radio · OK para reproducir</span>
+    </div>
+    <div class="corner">
+        <div class="tag">STUDIO DANY VA</div>
+        <div class="place">Playa del Carmen · MX</div>
+    </div>
+
+    <pre id="debug" class="debug hidden"></pre>
+    <audio id="radio" preload="none"></audio>
+</body>
+</html>
