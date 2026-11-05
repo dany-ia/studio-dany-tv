@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920, height=1080">
+<title>Studio Dany · Ambient</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#e9f2ff; --dim:#9fb3d9; --accent:#ffb347; --glow:#7c5cff;
+  }
+  html,body{margin:0;height:100%;background:#05060f;overflow:hidden;cursor:none;font-family:'VT323',monospace;color:var(--ink)}
+  #scene{position:fixed;inset:0;width:100%;height:100%;display:block}
+  .hud{position:fixed;left:72px;top:64px;z-index:5;text-shadow:0 0 18px rgba(124,92,255,.55),0 0 2px #000}
+  .clock{font-family:'Press Start 2P',monospace;font-size:132px;line-height:1;letter-spacing:4px;color:#fff}
+  .clock .sec{font-size:40px;color:var(--accent);margin-left:18px;vertical-align:top}
+  .date{font-size:44px;margin-top:22px;letter-spacing:2px;text-transform:uppercase;color:var(--ink)}
+  .weather{font-size:40px;margin-top:10px;color:var(--dim)}
+  .weather b{color:var(--accent);font-weight:normal}
+  .corner{position:fixed;right:72px;bottom:56px;z-index:5;text-align:right;font-size:34px;color:var(--dim);text-shadow:0 0 12px rgba(0,0,0,.8)}
+  .corner .tag{font-family:'Press Start 2P',monospace;font-size:16px;letter-spacing:2px;color:var(--accent)}
+  .radio{position:fixed;left:72px;bottom:56px;z-index:5;font-size:32px;color:var(--dim);display:flex;align-items:center;gap:16px}
+  .bars{display:inline-flex;gap:4px;align-items:flex-end;height:28px}
+  .bars i{width:6px;background:var(--accent);height:8px;animation:eq 1s infinite ease-in-out}
+  .bars i:nth-child(2){animation-delay:.2s}.bars i:nth-child(3){animation-delay:.4s}.bars i:nth-child(4){animation-delay:.1s}
+  .bars.off i{animation:none;height:6px;background:#445}
+  @keyframes eq{0%,100%{height:8px}50%{height:28px}}
+  .vignette{position:fixed;inset:0;z-index:3;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.65) 100%)}
+  .scan{position:fixed;inset:0;z-index:4;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.12) 0 2px,transparent 2px 4px);opacity:.5}
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div class="vignette"></div><div class="scan"></div>
+
+<div class="hud">
+  <div class="clock"><span id="hm">00:00</span><span class="sec" id="ss">00</span></div>
+  <div class="date" id="date">—</div>
+  <div class="weather" id="wx">☁ cargando clima…</div>
+</div>
+
+<div class="radio"><span class="bars off" id="bars"><i></i><i></i><i></i><i></i></span><span id="radioLabel">lofi radio · OK para reproducir</span></div>
+<div class="corner"><div class="tag">STUDIO DANY VA</div><div>Playa del Carmen · Cancún</div></div>
+
+<audio id="radio" preload="none" src="https://ice1.somafm.com/groovesalad-128-mp3"></audio>
+
+<script>
+/* ---------- reloj y fecha ---------- */
+const DIAS=['DOMINGO','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO'];
+const MESES=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+function tick(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  document.getElementById('hm').textContent=p(d.getHours())+':'+p(d.getMinutes());
+  document.getElementById('ss').textContent=p(d.getSeconds());
+  document.getElementById('date').textContent=`${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]}`;
+}
+setInterval(tick,1000);tick();
+
+/* ---------- clima (Open-Meteo, sin API key) ---------- */
+const LAT=20.63,LON=-87.07;
+const WX={0:'☀ despejado',1:'🌤 mayormente despejado',2:'⛅ parcialmente nublado',3:'☁ nublado',45:'🌫 niebla',48:'🌫 niebla',51:'🌦 llovizna',53:'🌦 llovizna',55:'🌧 llovizna',61:'🌧 lluvia ligera',63:'🌧 lluvia',65:'🌧 lluvia fuerte',80:'🌦 chubascos',81:'🌧 chubascos',82:'⛈ chubascos fuertes',95:'⛈ tormenta',96:'⛈ tormenta',99:'⛈ tormenta'};
+async function weather(){
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,weather_code,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FCancun`);
+    const j=await r.json();
+    const c=j.current, dl=j.daily;
+    document.getElementById('wx').innerHTML=`${WX[c.weather_code]||'☁'} <b>${Math.round(c.temperature_2m)}°</b> · ${Math.round(dl.temperature_2m_min[0])}° / ${Math.round(dl.temperature_2m_max[0])}° · ${c.relative_humidity_2m}% hum`;
+  }catch(e){document.getElementById('wx').textContent='☁ clima no disponible';}
+}
+weather();setInterval(weather,15*60*1000);
+
+/* ---------- radio: OK / Enter en el control ---------- */
+const audio=document.getElementById('radio'),bars=document.getElementById('bars'),lbl=document.getElementById('radioLabel');
+function toggleRadio(){
+  if(audio.paused){audio.play().then(()=>{bars.classList.remove('off');lbl.textContent='lofi radio · groove salad';}).catch(()=>{lbl.textContent='lofi radio · sin señal';});}
+  else{audio.pause();bars.classList.add('off');lbl.textContent='lofi radio · OK para reproducir';}
+}
+document.addEventListener('keydown',e=>{ if(e.keyCode===13||e.key==='Enter'||e.keyCode===10009) toggleRadio(); });
+document.addEventListener('click',toggleRadio);
+if(window.tizen&&tizen.tvinputdevice){try{tizen.tvinputdevice.registerKey('MediaPlayPause');}catch(e){}}
+
+/* ---------- escena pixel art procedural: ciudad nocturna ---------- */
+const cv=document.getElementById('scene'),ctx=cv.getContext('2d');
+let W,H,PX=6; // tamaño de pixel
+function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+addEventListener('resize',resize);resize();
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const stars=Array.from({length:220},()=>({x:Math.random(),y:Math.random()*0.55,t:Math.random()*6.28,s:Math.random()<0.15?2:1}));
+function mkLayer(n,minW,maxW,minH,maxH){
+  const b=[];let x=-20;
+  while(x<1.05){const w=rnd(minW,maxW);b.push({x,w,h:rnd(minH,maxH),win:Math.random()});x+=w+rnd(0.004,0.02);}
+  return b;
+}
+const back=mkLayer(0,0.03,0.07,0.14,0.34), mid=mkLayer(0,0.04,0.09,0.08,0.24), front=mkLayer(0,0.06,0.13,0.05,0.16);
+const ships=Array.from({length:7},()=>({x:Math.random(),y:rnd(0.1,0.45),v:rnd(0.00025,0.0007)*(Math.random()<0.5?1:-1),c:Math.random()<0.5?'#ff5e7a':'#5ef2ff'}));
+let t=0;
+function px(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x/PX)*PX,Math.round(y/PX)*PX,Math.max(PX,Math.round(w/PX)*PX),Math.max(PX,Math.round(h/PX)*PX));}
+function layer(bs,base,col,winCol,parallax,density){
+  for(const b of bs){
+    const bx=(b.x*W+Math.sin(t*0.0002)*parallax)%(W*1.05);
+    const bw=b.w*W,bh=b.h*H,by=base-bh;
+    px(bx,by,bw,bh,col);
+    // ventanas
+    const cols=Math.floor(bw/(PX*3)),rows=Math.floor(bh/(PX*3));
+    for(let i=0;i<cols;i++)for(let j=0;j<rows;j++){
+      const seed=Math.sin(i*12.9898+j*78.233+b.win*1000)*43758.5453;const f=seed-Math.floor(seed);
+      if(f<density){
+        const flick=(Math.sin(t*0.002+f*50)>0.97)?0.2:1;
+        ctx.globalAlpha=flick;px(bx+PX*1.5+i*PX*3,by+PX*1.5+j*PX*3,PX,PX,winCol);ctx.globalAlpha=1;
+      }
+    }
+  }
+}
+function draw(){
+  t+=16;
+  // cielo: atardecer a noche en gradiente
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#070a1f');g.addColorStop(0.45,'#1b1247');g.addColorStop(0.7,'#5a2a6e');g.addColorStop(0.85,'#ff7a3d');g.addColorStop(1,'#ffc26b');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  // sol pixelado
+  const sy=H*0.78;ctx.fillStyle='#ffd27a';
+  for(let r=0;r<14;r++){const rw=Math.sqrt(14*14-r*r)*PX*2;px(W*0.62-rw/2,sy-r*PX*2,rw,PX*2,r%3==0?'#ffb347':'#ffd27a');}
+  // estrellas
+  for(const s of stars){const a=0.4+0.6*Math.abs(Math.sin(t*0.001+s.t));ctx.globalAlpha=a;px(s.x*W,s.y*H,PX*s.s,PX*s.s,'#dfe9ff');}
+  ctx.globalAlpha=1;
+  // naves
+  for(const s of ships){s.x+=s.v;if(s.x>1.05)s.x=-0.05;if(s.x<-0.05)s.x=1.05;px(s.x*W,s.y*H,PX*4,PX,s.c);px(s.x*W+(s.v>0?-PX*3:PX*4),s.y*H,PX*3,PX,'rgba(255,255,255,.25)');}
+  // capas de ciudad
+  layer(back,H*0.86,'#140f33','#5e4cff',40,0.22);
+  layer(mid,H*0.9,'#0c0a24','#ffb347',90,0.3);
+  layer(front,H*0.96,'#06051a','#ffe08a',160,0.35);
+  // suelo con reflejo
+  const rg=ctx.createLinearGradient(0,H*0.9,0,H);rg.addColorStop(0,'rgba(90,42,110,.6)');rg.addColorStop(1,'#05060f');
+  ctx.fillStyle=rg;ctx.fillRect(0,H*0.96,W,H*0.04);
+  // lluvia de partículas
+  for(let i=0;i<40;i++){const y=((t*0.08)+i*137)%H,x=(i*97+Math.sin(i)*300+W)%W;ctx.globalAlpha=0.15;px(x,y,PX,PX*2,'#9ad0ff');}
+  ctx.globalAlpha=1;
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>

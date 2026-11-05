@@ -1,0 +1,19 @@
+# private: device inventory, tokens, certs, camera frames, logs, pids
+.local/
+*.p12
+*.pwd
+*.pem
+*.key
+*.crt
+watcher/certs/
+watcher/frames/
+watcher/*.pem
+.env
+# build output
+app/**/.buildResult/
+app/**/*.wgt
+dist/
+# tooling clone (installed separately)
+.skills-src/
+node_modules/
+.DS_Store
