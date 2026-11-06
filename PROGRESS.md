@@ -38,6 +38,11 @@ Private details (IPs, DUID, tokens) live in `.local/` (git-ignored). Dates are a
 - Step C (2026-11-05/06): weather engine, Mexico-calendar decorations (JSON), ambient animations,
   radio by time of day (11 streams verified on the TV). After trimming the per-frame shader work:
   60 fps clear night, 57 in a storm. Dev overlay hidden by default from step D.
+- Feedback round after v1 (2026-11-06): smooth Outfit clock/date/weather with a time-of-day
+  accent, 160 px cover bottom-left, wind model from Open-Meteo speed + gusts (palms, sea, hammock,
+  string lights, debris), coffee bar 06:30-11:30 with a one-by-one prop swap until 12:00, night
+  cast clipped to sand/counter with the bartender on his own palette, patron state machine with
+  dog/kid/selfie on cached frames. Renders in `.local/render/`, photos in `.local/evidence/`.
 - Step D (2026-11-06): README, MIT license, CONTRIBUTING, day-cycle GIF from headless Chrome,
   public repo github.com/dany-ia/studio-dany-tv.
 

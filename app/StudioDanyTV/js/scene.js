@@ -23,11 +23,16 @@
     var E = global.ENV || {}, D = global.DEV || {}, date = sceneDate(), A = global.Astro.at(date);
     var code = D.code != null ? D.code : (E.code != null ? E.code : 0);
     var wx = global.Weather ? global.Weather.params(code) : { cloud: 0.05, rain: 0, fog: 0, storm: false };
+    // wind: Open-Meteo 10 m speed and gusts (the dev overlay forces a speed; gusts follow at x1.4);
+    // windEff swells from the base speed toward the gust speed on a slow envelope and drives palms, sea, hammock, lights, debris
+    var wind = D.wind != null ? D.wind : (E.wind != null ? E.wind : 10);
+    var gust = D.wind != null ? D.wind * 1.4 : Math.max(wind, E.gust != null ? E.gust : wind);
+    var windEff = wind + (gust - wind) * (global.Weather ? global.Weather.gustEnv(Date.now() / 1000) : 0);
     return {
       date: date, hour: date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600,
       astro: A, sunrise: A.sunriseH, sunset: A.sunsetH,
       cloud: wx.cloud, code: code, weather: wx,
-      wind: D.wind != null ? D.wind : (E.wind != null ? E.wind : 10),
+      wind: wind, gust: gust, windEff: windEff, windLevel: global.Weather ? global.Weather.wind(windEff).level : 1,
       month: date.getMonth() + 1, day: date.getDate(), year: date.getFullYear()
     };
   }
@@ -42,7 +47,7 @@
   function setUniforms(p, S, t) {
     var A = S.astro;
     p.set2f("u_res", W, H); p.set1f("u_time", t);
-    p.set1f("u_cloud", S.cloud); p.set1f("u_wind", S.wind); p.set1f("u_quality", quality);
+    p.set1f("u_cloud", S.cloud); p.set1f("u_wind", S.windEff); p.set1f("u_quality", quality);
     p.set1f("u_rain", S.weather.rain); p.set1f("u_fog", S.weather.fog); p.set1f("u_flash", flash);
     p.set1f("u_elev", A.elev); p.set1f("u_sunUp", A.sunUp); p.set2f("u_sunPos", A.sun.x, A.sun.y);
     p.set1f("u_moonUp", A.moonUp); p.set2f("u_moonPos", A.moon.x, A.moon.y); p.set2f("u_moonDir", A.moonDir.x, A.moonDir.y);

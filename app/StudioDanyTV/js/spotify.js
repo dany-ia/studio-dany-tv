@@ -42,6 +42,7 @@
 
   /* start the slot playlist on the device: transfer + play with context, then shuffle on / repeat off */
   function startSlot(slot, cb) {
+    if (global.SPOTIFY_READONLY) { lastSlotStarted = slot.key; state.slot = slot.name; emit(); return cb && cb(null); }
     var uri = playlists && playlists[slot.key]; if (!uri) return cb && cb(new Error("no playlist for " + slot.key));
     api("PUT", "/me/player/play?device_id=" + deviceId, { context_uri: uri }, function (err, st) {
       if (err || st >= 400) return cb && cb(err || new Error("play " + st));
@@ -80,7 +81,7 @@
       hourFn = hour; onChange = change;
       load("config.local.json", function (err, c) {
         if (err || !c || !c.brokerUrl) { state.ok = false; state.reason = "sin config.local.json"; emit(); return; }
-        cfg = c; deviceId = c.deviceId;
+        cfg = c; deviceId = c.deviceId; if (global.BROKER_OVERRIDE) cfg.brokerUrl = global.BROKER_OVERRIDE;
         load("playlists.json", function (e2, p) {
           playlists = p || {}; if (e2) { state.ok = false; state.reason = "sin playlists.json"; emit(); return; }
           poll(); pollTimer = setInterval(poll, 5000);
@@ -88,11 +89,11 @@
       });
     },
     toggle: function () {
-      if (!state.ok) return;
+      if (!state.ok || global.SPOTIFY_READONLY) return;
       if (state.playing) { api("PUT", "/me/player/pause", null, function () { state.playing = false; state.wasPaused = true; emit(); }); }
       else { state.wasPaused = false; api("PUT", "/me/player/play?device_id=" + deviceId, null, function (err, st) { if (err || st >= 400) startSlot(slotFor(hourFn())); else { state.playing = true; emit(); } }); }
     },
-    next: function (dir) { if (!state.ok) return; api("POST", dir > 0 ? "/me/player/next?device_id=" + deviceId : "/me/player/previous?device_id=" + deviceId, null, function () { setTimeout(poll, 600); }); },
+    next: function (dir) { if (!state.ok || global.SPOTIFY_READONLY) return; api("POST", dir > 0 ? "/me/player/next?device_id=" + deviceId : "/me/player/previous?device_id=" + deviceId, null, function () { setTimeout(poll, 600); }); },
     state: function () { return state; },
     simulateDown: function (on) { simulateDown = on; failures = on ? 1 : 0; poll(); },
     slotFor: slotFor

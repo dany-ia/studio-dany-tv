@@ -3,7 +3,9 @@
    which sits over the WebGL background. Static parts are cached in offscreen canvases; only the
    animated sprites (palms, hammock, bartender) are redrawn per frame. A lighting pass at the end
    shades the sprites consistently with the shader's light state (night tint, twilight warmth,
-   string-light glow on counter and sand, golden-hour shadows). */
+   string-light glow on counter and sand, golden-hour shadows). The counter props and the ridge sign
+   follow the bar schedule (coffee bar in the morning, tiki bar from noon); wind from Open-Meteo drives
+   palms, hammock and string lights. */
 (function (global) {
   "use strict";
   var LW = 960, LH = 540, SHORE_Y = 394;          // horizon is at y=292, shore at 394 (matches the shader)
@@ -116,17 +118,9 @@
     for (var st = 0; st < 140; st++) { var sx = cx - 186 + Math.floor(hash(st, 3) * 372), sy = apexY + 4 + Math.floor(hash(st, 4) * 54); R(sx, sy, 1, 4 + Math.floor(hash(st, 5) * 6), "#9a7230"); }  // straw strokes
     for (var e = 0; e < 380; e += 5) R(cx - 190 + e, eaveY + 1, 3, 3 + (e % 10 === 0 ? 2 : 0), "#8f6a2c");   // fringe
     R(cx - 95, apexY - 4, 190, 4, "#8f6a2c"); R(cx - 92, apexY - 7, 184, 3, "#a67c3b");                       // ridge cap
-    // sign board "DANICKYS" on the ridge, with two tiki torches
-    R(cx - 66, 258, 132, 30, "#2b1d14"); R(cx - 63, 261, 126, 24, "#f4e4b8"); R(cx - 63, 261, 126, 2, "#fff6dc");
-    var tx = cx - 48, letters = "DANICKYS", cols = ["#c0392b", "#1f7a3a"];
-    for (var i = 0; i < letters.length; i++) text(tx + i * 12, 265, letters.charAt(i), 2, cols[i % 2]);
+    // two tiki torches beside the ridge sign (the sign itself is a prop: DANICKYS board or the CAFÉ chalkboard)
     R(cx - 78, 262, 4, 26, "#5a3a1a"); R(cx - 80, 256, 8, 7, "#ff9d3b"); R(cx - 78, 253, 4, 4, "#ffd36b");
     R(cx + 74, 262, 4, 26, "#5a3a1a"); R(cx + 72, 256, 8, 7, "#ff9d3b"); R(cx + 74, 253, 4, 4, "#ffd36b");
-    // string lights along the eave (cable with a sag between posts)
-    bulbs = []; var colors = ["#ffd36b", "#ff8c69", "#9bff8a", "#5ef2ff", "#ff9ad5"];
-    for (var l = 0; l < 22; l++) { var lx = cx - 190 + l * 18, sag = Math.sin((l / 21) * Math.PI * 3) * 3 + 3, ly = eaveY + 8 + sag;
-      R(lx, ly - 4, 1, 4, "#333"); R(lx - 1, ly, 3, 4, colors[l % 5]); R(lx, ly, 1, 1, "#ffffff"); bulbs.push({ x: lx + 1, y: ly + 2, c: colors[l % 5] }); }
-    R(cx - 190, eaveY + 6, 380, 1, "#2a2a2a");
   }
 
   /* ---------- tiki bar: front part (counter, props, stools, surfboard) ---------- */
@@ -136,11 +130,7 @@
     for (var s = X + 6; s < X + 306; s += 12) R(s, 426, 2, 57, wood2);
     for (var r = X + 8; r < X + 306; r += 6) R(r, 442, 3, 2, "#d9b86c");                                     // rope band
     R(X + 6, 481, 300, 2, "#4a2a10");
-    // props: cocktail with umbrella, coconut with straw, bowl of limes, tiki mug, hurricane lamp
-    R(X + 40, 406, 10, 14, "#ff9d3b"); R(X + 42, 402, 6, 4, "#ffd36b"); R(X + 38, 419, 14, 1, "#fff"); R(X + 44, 396, 10, 6, "#ff5e7a"); R(X + 48, 390, 1, 10, "#5a3a1a");
-    R(X + 100, 404, 18, 16, "#6b4a22"); R(X + 104, 400, 10, 5, "#8a6a44"); R(X + 110, 390, 2, 12, "#ff5e5e"); R(X + 106, 406, 4, 3, "#ffffff");
-    R(X + 150, 410, 22, 10, "#e8d7b0"); R(X + 152, 406, 6, 5, "#9bff8a"); R(X + 159, 405, 6, 5, "#8ae57a"); R(X + 166, 407, 5, 4, "#9bff8a");
-    R(X + 200, 402, 14, 18, "#c9a35a"); R(X + 203, 406, 8, 3, "#5a3416"); R(X + 203, 412, 8, 2, "#5a3416"); R(X + 205, 416, 4, 2, "#5a3416");
+    // hurricane lamp (the counter props live in PROPS below: tiki set or coffee set by hour)
     R(X + 264, 394, 14, 26, "#d9d9ea"); R(X + 262, 418, 18, 3, "#2b1d14"); R(X + 262, 392, 18, 3, "#2b1d14"); R(X + 268, 391, 6, 2, "#2b1d14");  // lamp body (flame drawn at night)
     // stools
     for (var st = 0; st < 3; st++) { var sx = X + 36 + st * 100; R(sx, 474, 30, 8, "#c08a4a"); R(sx, 474, 30, 2, "#e0a860"); R(sx + 3, 482, 4, 37, wood2); R(sx + 23, 482, 4, 37, wood2); R(sx + 3, 500, 24, 2, wood2); }
@@ -150,10 +140,90 @@
     R(X - 34, 452, 6, 12, "#2b1d14"); R(X - 36, 460, 4, 8, "#2b1d14");                                           // fin
   }
 
-  /* ---------- bartender (dynamic idle: wipe / shake / pour), 1.5x scale, Hawaiian shirt ---------- */
-  function bartender(t, S) {
+  /* ---------- string lights (per frame so they swing with the wind; the bulbs stay bright at night) ---------- */
+  var CX = X + 156, EAVE_Y = 312, BULB_COLORS = ["#ffd36b", "#ff8c69", "#9bff8a", "#5ef2ff", "#ff9ad5"];
+  for (var bl = 0; bl < 22; bl++) { var blx = CX - 190 + bl * 18, bsag = Math.sin((bl / 21) * Math.PI * 3) * 3 + 3; bulbs.push({ lx: blx, ly: EAVE_Y + 8 + bsag, x: blx + 1, y: EAVE_Y + 10 + bsag, c: BULB_COLORS[bl % 5] }); }
+  function stringLights(dx) {
+    R(CX - 190, EAVE_Y + 6, 380, 1, "#2a2a2a");
+    for (var l = 0; l < bulbs.length; l++) { var b = bulbs[l], sx = b.lx + dx * (0.6 + 0.4 * Math.sin(l * 1.7));   // each bulb swings a little differently
+      R(sx, b.ly - 4, 1, 4, "#333"); R(sx - 1, b.ly, 3, 4, b.c); R(sx, b.ly, 1, 1, "#ffffff"); }
+  }
+
+  /* ---------- counter props + ridge sign: the tiki set (12:00 → 03:00) and the coffee set (morning).
+     Between 11:30 and 12:00 they swap one by one, cocktail first and the sign last. The current
+     combination is painted once into a cached layer. ---------- */
+  function mug(x, y, c) { R(x, y, 10, 11, c); R(x + 10, y + 2, 3, 6, c); R(x + 11, y + 4, 1, 2, "#2b1d14"); R(x + 1, y, 8, 1, "#3b2314"); R(x + 1, y + 1, 1, 9, "rgba(255,255,255,0.4)"); }
+  var PROPS = [
+    { tiki: function () {                                   // cocktail with umbrella
+        R(X + 40, 406, 10, 14, "#ff9d3b"); R(X + 42, 402, 6, 4, "#ffd36b"); R(X + 38, 419, 14, 1, "#fff"); R(X + 44, 396, 10, 6, "#ff5e7a"); R(X + 48, 390, 1, 10, "#5a3a1a"); },
+      coffee: function () {                                 // espresso machine: chrome body, group head, portafilter, cup on the drip tray, pilot light, steam wand
+        R(X + 30, 390, 46, 30, "#c8ccd8"); R(X + 30, 390, 46, 3, "#3b3b46"); R(X + 30, 388, 46, 2, "#e6e8f0"); R(X + 34, 395, 38, 8, "#3b3b46"); R(X + 36, 397, 14, 4, "#5ef2ff");
+        R(X + 68, 397, 4, 4, "#ff5e5e"); R(X + 44, 403, 10, 4, "#2b2b33"); R(X + 42, 407, 14, 2, "#8a8a96"); R(X + 56, 406, 8, 2, "#2b2b33");
+        R(X + 44, 412, 10, 7, "#f4f4f4"); R(X + 54, 414, 2, 3, "#f4f4f4"); R(X + 30, 418, 46, 2, "#8a8a96"); R(X + 76, 392, 3, 12, "#8a8a96"); R(X + 76, 404, 3, 10, "#555555"); } },
+    { tiki: function () {                                   // coconut with straw
+        R(X + 100, 404, 18, 16, "#6b4a22"); R(X + 104, 400, 10, 5, "#8a6a44"); R(X + 110, 390, 2, 12, "#ff5e5e"); R(X + 106, 406, 4, 3, "#ffffff"); },
+      coffee: function () { mug(X + 88, 408, "#f4f4f4"); mug(X + 102, 408, "#e8453c"); mug(X + 116, 408, "#2bb3a9"); } },   // three mugs
+    { tiki: function () {                                   // bowl of limes
+        R(X + 150, 410, 22, 10, "#e8d7b0"); R(X + 152, 406, 6, 5, "#9bff8a"); R(X + 159, 405, 6, 5, "#8ae57a"); R(X + 166, 407, 5, 4, "#9bff8a"); },
+      coffee: function () {                                 // coffee bag with a label
+        R(X + 148, 396, 26, 24, "#6b4a22"); R(X + 150, 392, 22, 5, "#8a6a44"); R(X + 152, 390, 18, 2, "#5a3a1a"); R(X + 150, 403, 22, 10, "#f4e4b8"); text(X + 150, 405, "CAFÉ", 1, "#5a3a1a"); R(X + 158, 414, 6, 1, "#c0392b"); } },
+    { tiki: function () {                                   // tiki mug
+        R(X + 200, 402, 14, 18, "#c9a35a"); R(X + 203, 406, 8, 3, "#5a3416"); R(X + 203, 412, 8, 2, "#5a3416"); R(X + 205, 416, 4, 2, "#5a3416"); },
+      coffee: function () {                                 // pastry basket: wicker, two conchas and a croissant
+        R(X + 196, 410, 34, 10, "#c98b4a"); for (var i = 0; i < 8; i++) R(X + 198 + i * 4, 412 + (i % 2) * 2, 2, 2, "#a06a30"); R(X + 196, 410, 34, 1, "#e0a860");
+        R(X + 198, 403, 10, 7, "#ff9ad5"); R(X + 200, 401, 6, 2, "#ff9ad5"); R(X + 201, 404, 2, 1, "#ffffff"); R(X + 205, 406, 2, 1, "#ffffff");
+        R(X + 209, 403, 10, 7, "#ffd36b"); R(X + 211, 401, 6, 2, "#ffd36b"); R(X + 212, 404, 2, 1, "#f4e4b8"); R(X + 216, 406, 2, 1, "#f4e4b8");
+        R(X + 220, 405, 9, 5, "#e0a860"); R(X + 219, 407, 2, 3, "#c98b4a"); R(X + 228, 407, 2, 3, "#c98b4a"); } },
+    { tiki: function () {                                   // cocktail shaker and half a lime
+        R(X + 236, 398, 10, 22, "#c8ccd8"); R(X + 238, 394, 6, 5, "#a9aeba"); R(X + 237, 398, 2, 22, "#eef0f5"); R(X + 236, 408, 10, 1, "#8a8a96"); R(X + 250, 414, 6, 6, "#9bff8a"); R(X + 252, 416, 2, 2, "#e8ffd8"); },
+      coffee: function () {                                 // milk jug and a sugar jar
+        R(X + 236, 404, 12, 16, "#f4f4f4"); R(X + 234, 402, 6, 3, "#f4f4f4"); R(X + 248, 408, 3, 6, "#f4f4f4"); R(X + 237, 404, 1, 16, "#dcdcdc");
+        R(X + 254, 408, 10, 12, "#dff3ff"); R(X + 253, 406, 12, 3, "#8a8a96"); for (var j = 0; j < 6; j++) R(X + 255 + (j % 3) * 3, 411 + Math.floor(j / 3) * 4, 2, 2, "#ffffff"); } },
+    { tiki: function () {                                   // "DANICKYS" board on the ridge
+        R(CX - 66, 258, 132, 30, "#2b1d14"); R(CX - 63, 261, 126, 24, "#f4e4b8"); R(CX - 63, 261, 126, 2, "#fff6dc");
+        var letters = "DANICKYS", cols = ["#c0392b", "#1f7a3a"]; for (var i = 0; i < letters.length; i++) text(CX - 48 + i * 12, 265, letters.charAt(i), 2, cols[i % 2]); },
+      coffee: function () {                                 // chalkboard "CAFÉ" with a steaming cup in chalk
+        R(CX - 66, 258, 132, 30, "#5a3a1a"); R(CX - 63, 261, 126, 24, "#1e2a24"); R(CX - 61, 263, 122, 1, "#5f6f66"); R(CX - 61, 283, 122, 1, "#5f6f66");
+        text(CX - 34, 265, "CAFÉ", 2, "#f4f4f4"); R(CX + 22, 273, 10, 8, "#f4f4f4"); R(CX + 32, 275, 3, 4, "#f4f4f4"); R(CX + 24, 281, 6, 1, "#f4f4f4");
+        R(CX + 24, 266, 1, 4, "#ffd36b"); R(CX + 27, 265, 1, 5, "#ffd36b"); R(CX + 30, 266, 1, 4, "#ffd36b"); R(CX - 58, 266, 8, 2, "#ff9ad5"); R(CX - 58, 278, 8, 2, "#9bff8a"); } }
+  ];
+  /* "t"/"c" per prop: tiki from its swap time (11:30 + i steps) until the bar closes at 03:00, coffee otherwise */
+  function propState(hour) {
+    var n = PROPS.length, s = "";
+    for (var i = 0; i < n; i++) { var swapAt = 11.5 + (i + 1) * (0.5 / (n + 1)); s += (hour >= swapAt || hour < 3) ? "t" : "c"; }
+    return s;
+  }
+  var propsKey = "", propsCanvas = null, PROPSBOX = [X - 70, 250, 400, 175];
+  function propsLayer(hour) {
+    var key = propState(hour);
+    if (key !== propsKey) {
+      propsKey = key; propsCanvas = propsCanvas || mk(); var G = g; g = propsCanvas.getContext("2d"); g.clearRect(0, 0, LW, LH);
+      for (var i = 0; i < PROPS.length; i++) (key.charAt(i) === "t" ? PROPS[i].tiki : PROPS[i].coffee)();
+      g = G;
+    }
+    return propsCanvas;
+  }
+  var STEAM = [[X + 49, 410, 1], [X + 93, 406, 2], [X + 107, 406, 2], [X + 121, 406, 2]];      // espresso cup and the three mugs (prop index that must be in coffee mode)
+  function steam(t, key) {
+    for (var i = 0; i < STEAM.length; i++) { if (key.charAt(STEAM[i][2]) !== "c") continue;
+      for (var p = 0; p < 3; p++) { var ph = (t * 9 + p * 7 + i * 4) % 22, a = 0.5 * (1 - ph / 22); R(STEAM[i][0] + Math.sin(t * 2 + p * 2 + i) * 2, STEAM[i][1] - 6 - ph, 2, 2, "rgba(255,255,255," + a.toFixed(2) + ")"); } }
+  }
+
+  /* ---------- bartender, 1.5x scale, Hawaiian shirt. Tiki hours: wipe a glass / shake / pour; coffee hours: wipe a mug /
+     grind / pour the kettle. Drawn after the lighting pass (clipped to above the counter) with its own palette: at night the
+     face and shirt are warmed by the bulbs instead of being stained by the cast. ---------- */
+  var shadeCache = {};
+  function shade(hex, k, dark) {                           // mix toward warm bulb light (k) and darken (dark), cached per colour
+    var key = hex + k + ":" + dark, c = shadeCache[key]; if (c) return c;
+    var r = parseInt(hex.slice(1, 3), 16), gg = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    r = Math.round((r * (1 - k) + 255 * k) * (1 - dark)); gg = Math.round((gg * (1 - k) + 190 * k) * (1 - dark)); b = Math.round((b * (1 - k) + 110 * k) * (1 - dark));
+    return (shadeCache[key] = "rgb(" + r + "," + gg + "," + b + ")");
+  }
+  function bartender(t, S, L, coffee) {
     var bx = X + 150, by = 438, Z = 1.5;              // feet below the counter top (hidden behind it); hat clears the string lights
-    var Q = function (x, y, w, h, c) { R(bx + x * Z, by + y * Z, w * Z, h * Z, c); };   // scaled rect, origin at the feet
+    var lit = Math.max(0, L.lightsOn) * L.night, k = Math.round(0.35 * lit * 10) / 10, dark = Math.round(0.45 * L.night * (1 - 0.5 * lit) * 10) / 10;
+    var C = function (h) { return (k || dark) ? shade(h, k, dark) : h; };
+    var Q = function (x, y, w, h, c) { R(bx + x * Z, by + y * Z, w * Z, h * Z, C(c)); };   // scaled rect, origin at the feet
     var cycle = Math.floor(t / 9) % 3, ph = (t % 9) / 9;
     var bob = Math.round(Math.sin(t * 6) * (cycle === 1 ? 1.5 : 0.5));
     var skin = "#d9a06b", shirt = "#e8453c", hair = "#2b1d14";
@@ -166,21 +236,33 @@
     Q(-8, -62 + bob, 16, 18, skin); Q(-9, -64 + bob, 18, 5, hair); Q(-8, -52 + bob, 2, 2, "#2b1d14"); Q(4, -52 + bob, 2, 2, "#2b1d14"); Q(-2, -47 + bob, 5, 1, "#a05a3a"); Q(-9, -50 + bob, 1, 6, hair); Q(8, -50 + bob, 1, 6, hair);
     Q(-15, -66 + bob, 30, 4, "#e6c87a"); Q(-9, -72 + bob, 18, 7, "#e6c87a"); Q(-9, -69 + bob, 18, 1, "#c0392b");
     // arms by activity
-    if (cycle === 0) {                                  // wiping a glass
+    if (cycle === 0) {                                  // wiping a glass (or a mug in the morning)
       Q(-22, -40 + bob, 7, 18, shirt); Q(-22, -24 + bob, 7, 5, skin);
       var wx = Math.round(Math.sin(ph * Math.PI * 8) * 3);
       Q(14, -40 + bob, 7, 10, shirt); Q(18 + wx, -32 + bob, 6, 6, skin); Q(16 + wx, -34 + bob, 10, 2, "#ffffff");
-      Q(-24, -36 + bob, 10, 12, "#cfeeff"); Q(-22, -36 + bob, 2, 12, "#ffffff");
-    } else if (cycle === 1) {                           // shaking a cocktail shaker over the shoulder
+      if (coffee) { Q(-24, -34 + bob, 9, 9, "#f4f4f4"); Q(-15, -32 + bob, 2, 5, "#f4f4f4"); } else { Q(-24, -36 + bob, 10, 12, "#cfeeff"); Q(-22, -36 + bob, 2, 12, "#ffffff"); }
+    } else if (cycle === 1 && !coffee) {                // shaking a cocktail shaker over the shoulder
       var sh = Math.round(Math.sin(t * 14) * 3);
       Q(14, -46 + bob, 7, 14, shirt); Q(18, -56 + sh + bob, 6, 10, skin);
       Q(16, -74 + sh + bob, 12, 20, "#c8ccd8"); Q(18, -78 + sh + bob, 8, 5, "#a9aeba"); Q(17, -74 + sh + bob, 2, 20, "#eef0f5");
       Q(-22, -40 + bob, 7, 18, shirt); Q(-22, -24 + bob, 7, 5, skin);
-    } else {                                            // pouring into a glass on the counter
+    } else if (cycle === 1) {                           // turning the crank of a hand grinder on the counter
+      var a = t * 7, hx = -27 + Math.cos(a) * 4, hy = -22 + Math.sin(a) * 2;
+      Q(14, -40 + bob, 7, 16, shirt); Q(14, -26 + bob, 7, 5, skin);
+      Q(-30, -14, 12, 12, "#8a5a2b"); Q(-29, -13, 10, 2, "#a67c3b"); Q(-27, -18, 6, 4, "#3b3b46"); Q(-25, -24, 2, 6, "#8a8a96"); Q(-24 + Math.round((hx + 27) * 0.5), -24, 1, 1, "#8a8a96");
+      Q(-22, -40 + bob, 7, 12, shirt); Q(-24, -30 + bob, 6, Math.max(4, Math.round(8 + hy + 22)), skin); Q(hx - 2, hy, 5, 4, skin); Q(hx - 1, hy - 1, 3, 1, "#5a3a1a");
+    } else if (!coffee) {                               // pouring into a glass on the counter
       var pr = Math.round(ph * 4) % 2;
       Q(-22, -40 + bob, 7, 18, shirt); Q(-22, -24 + bob, 7, 5, skin);
       Q(14, -44 + bob, 8, 10, shirt); Q(20, -38 - pr + bob, 6, 6, skin); Q(22, -44 - pr + bob, 6, 12, "#5ef2ff"); Q(24, -32 + bob, 2, 10 + pr, "#ffd36b");
       Q(20, -12 + bob, 10, 12, "#cfeeff"); Q(22, -8 + bob, 6, 8, "#ffd36b");
+    } else {                                            // pouring the kettle into a cup
+      var tilt = Math.round(Math.sin(ph * Math.PI) * 2);
+      Q(-22, -40 + bob, 7, 18, shirt); Q(-22, -24 + bob, 7, 5, skin);
+      Q(14, -44 + bob, 8, 10, shirt); Q(20, -40 - tilt + bob, 6, 6, skin);
+      Q(18, -50 - tilt + bob, 14, 10, "#c8ccd8"); Q(20, -53 - tilt + bob, 8, 3, "#8a8a96"); Q(32, -48 - tilt + bob, 4, 2, "#c8ccd8"); Q(35, -46 - tilt + bob, 2, 3, "#c8ccd8");
+      if (tilt > 0) Q(36, -43 + bob, 1, 29, "#6b4a22");
+      Q(32, -14 + bob, 10, 10, "#f4f4f4"); Q(42, -12 + bob, 3, 5, "#f4f4f4");
     }
   }
 
@@ -209,13 +291,13 @@
   }
 
   /* ---------- lighting pass (logical canvas) ---------- */
-  var CAST = [X - 100, 210, 520, 330];
+  var CAST = [X - 130, 380, 560, LH - 380];                   // where the bulb cast may land (sand around the bar, counter top)
   function radial(cx, cy, r, color, a) {
     var gr = g.createRadialGradient(cx, cy, 0, cx, cy, r);
     gr.addColorStop(0, color.replace("A", a.toFixed(3))); gr.addColorStop(1, color.replace("A", "0"));
     g.fillStyle = gr; g.fillRect(cx - r, cy - r, r * 2, r * 2);
   }
-  function lighting(S, L, closed, W) {
+  function lighting(S, L, closed, W, ldx) {
     var lightsOn = closed ? 0 : L.lightsOn;
     if (W && W.cloud > 0.3 && L.d > 0.05) {                    // overcast / rainy daylight: cooler, flatter light on the sprites
       g.globalCompositeOperation = "source-atop"; g.fillStyle = "rgba(90,100,130," + (0.28 * W.cloud * L.d).toFixed(3) + ")";
@@ -227,15 +309,25 @@
     var a1 = 0.74 * (1 - L.d), a2 = 0.16 * L.tw, A = 1 - (1 - a1) * (1 - a2);
     g.globalCompositeOperation = "source-atop";
     if (A > 0.003) {
-      var k1 = a1 * (1 - a2) / A, k2 = a2 / A;
-      g.fillStyle = "rgba(" + Math.round(18 * k1 + 255 * k2) + "," + Math.round(28 * k1 + 130 * k2) + "," + Math.round(72 * k1 + 60 * k2) + "," + A.toFixed(3) + ")";
-      g.fillRect(0, SHORE_Y, LW, LH - SHORE_Y); g.fillRect(PALMS[0], PALMS[1], PALMS[2], SHORE_Y - PALMS[1]); g.fillRect(BAR[0], BAR[1], BAR[2], SHORE_Y - BAR[1]);
+      var k1 = a1 * (1 - a2) / A, k2 = a2 / A, rgb = Math.round(18 * k1 + 255 * k2) + "," + Math.round(28 * k1 + 130 * k2) + "," + Math.round(72 * k1 + 60 * k2);
+      g.fillStyle = "rgba(" + rgb + "," + A.toFixed(3) + ")";
+      g.fillRect(0, SHORE_Y, LW, LH - SHORE_Y); g.fillRect(PALMS[0], PALMS[1], PALMS[2], SHORE_Y - PALMS[1]);
+      // the bar keeps its own night palette: the same blue tint a touch lighter, so roof, posts, bottles and sign read desaturated, not muddy
+      g.fillStyle = "rgba(" + rgb + "," + (A * 0.8).toFixed(3) + ")"; g.fillRect(BAR[0], BAR[1], BAR[2], SHORE_Y - BAR[1]);
     }
-    if (lightsOn > 0.01) { g.globalAlpha = lightsOn; blit(layers.cast, CAST); radial(FIRE.x, FIRE.y - 4, 90, "rgba(255,150,60,A)", 0.45 * lightsOn); g.globalAlpha = 1; }   // warm cast on counter, sand and around the fire
-    if (L.night > 0.01) radial(X + 271, 405, 60, "rgba(255,200,120,A)", 0.55 * L.night);                   // hurricane lamp, always on at night
+    if (lightsOn > 0.01) {
+      // the bulbs' warm cast lands only on the sand around the bar and the counter top (the bartender gets it through his own palette)
+      g.save(); g.beginPath(); g.rect(CAST[0], SHORE_Y, CAST[2], LH - SHORE_Y); g.rect(X + 6, 418, 300, 9); g.clip();
+      g.globalAlpha = lightsOn; blit(layers.cast, CAST); g.globalAlpha = 1; g.restore();
+      radial(FIRE.x, FIRE.y - 4, 90, "rgba(255,150,60,A)", 0.45 * lightsOn);
+    }
+    if (L.night > 0.01) radial(X + 271, 408, 34, "rgba(255,200,120,A)", 0.35 * L.night);                   // hurricane lamp: a small pool of light
     if (closed) { g.fillStyle = "rgba(5,8,30,0.35)"; g.fillRect(X - 50, 240, 400, 300); }
     g.globalCompositeOperation = "source-over";
-    if (lightsOn > 0.01) { g.globalAlpha = lightsOn; blit(layers.halos, BAR); g.globalAlpha = 1; }   // bulb bloom
+    if (lightsOn > 0.01) {                                      // the bulbs themselves and their bloom stay bright
+      stringLights(ldx);
+      g.globalAlpha = lightsOn; g.drawImage(layers.halos, BAR[0], BAR[1], BAR[2], BAR[3], BAR[0] + Math.round(ldx * 0.7), BAR[1], BAR[2], BAR[3]); g.globalAlpha = 1;
+    }
     if (L.night > 0.01) { R(X + 269, 400, 4, 8, "#ffd36b"); R(X + 270, 398, 2, 4, "#fff2cc"); radial(X + 271, 404, 14, "rgba(255,210,130,A)", 0.6 * L.night); }
   }
   function hexToRgbaA(h) { return "rgba(" + parseInt(h.slice(1, 3), 16) + "," + parseInt(h.slice(3, 5), 16) + "," + parseInt(h.slice(5, 7), 16) + ",A)"; }
@@ -275,7 +367,7 @@
      Every cached layer is drawn cropped to its bounding box: on this GPU the cost is per pixel touched. */
   var BAR = [X - 60, 240, 420, 300], PALMS = [90, 100, 340, 370], SANDBAND = [0, 380, LW, LH - 380];   // bounding boxes [x, y, w, h]
   function blit(layer, b) { if (layer) g.drawImage(layer, b[0], b[1], b[2], b[3], b[0], b[1], b[2], b[3]); }
-  var lastT = 0;
+  var lastT = 0, palmPhase = 0, hamPhase = 0;
   function draw(t, S, L) {
     var dt = lastT ? Math.min(0.1, t - lastT) : 0.016; lastT = t;
     var W = S.weather || { cloud: 0, rain: 0, fog: 0, storm: false }, D = global.Decor, A = global.Ambient, WX = global.Weather;
@@ -284,21 +376,29 @@
     g.drawImage(layers.sand, 0, SHORE_Y, LW, LH - SHORE_Y, 0, SHORE_Y, LW, LH - SHORE_Y);
     shadows(L);
     if (D) blit(D.layer("sand", S.month, S.day), SANDBAND);
-    var wind = S.wind || 0, amp = 2 + wind * 0.25, phase = t * (0.8 + wind * 0.03);
-    if (Object.keys(palmCache).length > 80) palmCache = {};                      // wind changed a lot: drop stale frames
-    palmAt(0, 156, 456, 234, 30, amp, phase, 0); palmAt(1, 348, 450, 258, -24, amp * 0.8, phase + 1.3, 2);
-    hammockAt(172, 341, 316, 1.0 + wind * 0.06, t * 0.7);      // attached where the trunks pass y=316
+    // wind (Open-Meteo speed swelling toward the gusts): sway amplitude and speed for palms and hammock, swing for the string lights.
+    // calm <8 km/h barely moves, gentle 8-20 sways, strong 20-35 whips, storm above bends everything. Phases integrate so speed changes don't jump.
+    var ws = S.windEff != null ? S.windEff : (S.wind || 0), amp = 1 + ws * 0.22;
+    palmPhase += dt * (0.7 + ws * 0.035); hamPhase += dt * (0.55 + ws * 0.02);
+    if (Object.keys(palmCache).length > 100) palmCache = {};                     // wind changed a lot: drop stale frames
+    if (Object.keys(hamCache).length > 60) hamCache = {};
+    palmAt(0, 156, 456, 234, 30, amp, palmPhase, 0); palmAt(1, 348, 450, 258, -24, amp * 0.8, palmPhase + 1.3, 2);
+    hammockAt(172, 341, 316, 0.6 + ws * 0.08, hamPhase);        // attached where the trunks pass y=316
     var fireLit = L.lightsOn > 0.05 && W.rain < 0.3;            // rain puts the fire out
     if (fireLit) firePit(t, L);
-    if (A) A.sand(t, dt, S, L, fireLit);                          // crab, fireflies, grill, smoke
+    if (A) A.sand(t, dt, S, L, fireLit);                          // crab, fireflies, grill, smoke, wind debris
     blit(layers.barBack, BAR);
+    var ldx = Math.sin(t * 2.3) * ws * 0.07;                      // string-light swing in px (<1 px in a breeze, ~3 px in a storm)
+    if (L.lightsOn <= 0.01) stringLights(ldx);                    // by day the bulbs are plain sprites; after dusk lighting() draws them lit
     if (D) blit(D.layer("back", S.month, S.day), BAR);
     var closed = S.hour >= 3 && S.hour < 6.5;                   // bar closed and dark, one lamp on
-    if (!closed) bartender(t, S);
     blit(layers.barFront, BAR);
+    var pk = propState(S.hour); blit(propsLayer(S.hour), PROPSBOX);
+    if (!closed) steam(t, pk);                                    // steam over the espresso cup and the mugs in the morning
     if (D) { blit(D.layer("front", S.month, S.day), BAR); D.dynamic(new Date()); }
-    if (A) A.front(t, S);                                         // patrons at golden hour
-    lighting(S, L, closed, W);
+    if (A) A.front(t, dt, S, L);                                  // patrons, dog, kid, selfie
+    lighting(S, L, closed, W, ldx);
+    if (!closed) { g.save(); g.beginPath(); g.rect(X + 96, 300, 110, 120); g.clip(); bartender(t, S, L, S.hour < 12); g.restore(); }   // above the counter only
     if (D) D.lights(L, t);                                        // candle / Christmas-light glows stay bright at night
     if (WX) WX.draw(t, W, S, L);                                  // fog tint, rain, lightning
     if (post.on) g.drawImage(layers.post, 0, 0);                // vignette + scanlines, one cached layer
@@ -318,7 +418,7 @@
       layers.barBack = mk(); g = layers.barBack.getContext("2d"); drawBarBack();
       layers.barFront = mk(); g = layers.barFront.getContext("2d"); drawBarFront();
       layers.cast = mk(); g = layers.cast.getContext("2d");                         // warm light cast (applied source-atop)
-      radial(X + 156, 400, 190, "rgba(255,190,110,A)", 0.50); radial(X + 156, 520, 240, "rgba(255,180,100,A)", 0.30);
+      radial(X + 156, 430, 200, "rgba(255,200,130,A)", 0.34); radial(X + 156, 520, 260, "rgba(255,190,120,A)", 0.22);
       layers.halos = mk(); g = layers.halos.getContext("2d");                       // bulb bloom (applied source-over)
       for (var j = 0; j < bulbs.length; j++) radial(bulbs[j].x, bulbs[j].y, 8, hexToRgbaA(bulbs[j].c), 0.55);
       buildPost(); g = fctx;

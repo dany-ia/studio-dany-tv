@@ -19,11 +19,15 @@
   window.DEV = { on: false, field: 0, hour: null, code: null, month: null, day: null, wind: null, q: 2, res: 720, sky: 4 };
 
   // ---------- clock ----------
+  var accentNow = "";
   function tick() {
-    var d = Scene.state().date;                              // the scene's date: real, or forced through the dev overlay
+    var S = Scene.state(), d = S.date;                       // the scene's date: real, or forced through the dev overlay
     $("hm").textContent = p2(d.getHours()) + ":" + p2(d.getMinutes());
     $("ss").textContent = p2(d.getSeconds());
     $("date").textContent = DIAS[d.getDay()] + " " + d.getDate() + " DE " + MESES[d.getMonth()];
+    // HUD accent by sun elevation: sand-gold by day, coral around sunrise/sunset, pale cyan at night
+    var e = S.astro.elev, accent = e > 0.12 ? "#f2c66d" : (e > -0.10 ? "#ff7f66" : "#9fe8ff");
+    if (accent !== accentNow) { accentNow = accent; document.documentElement.style.setProperty("--accent", accent); }
   }
 
   // ---------- weather ----------
@@ -38,17 +42,19 @@
   var lastWx = null;
   function renderWx(j) {
     var c = j.current, d = j.daily, forced = window.DEV && window.DEV.code != null;
-    $("wx").innerHTML = (WX[forced ? window.DEV.code : c.weather_code] || "clima") + (forced && !CFG.clean ? " (dev)" : "") + " <b>" + Math.round(c.temperature_2m) + "°</b> · " +
-      Math.round(d.temperature_2m_min[0]) + "° / " + Math.round(d.temperature_2m_max[0]) + "° · " +
-      Math.round(c.relative_humidity_2m) + "% hum · " + Math.round(c.wind_speed_10m) + " km/h";
-    window.ENV.code = c.weather_code; window.ENV.wind = c.wind_speed_10m; window.ENV.isDay = c.is_day;
+    var sep = "<span class='sep'>·</span>", gust = c.wind_gusts_10m != null ? Math.round(c.wind_gusts_10m) : 0, w = Math.round(c.wind_speed_10m);
+    $("wx").innerHTML = "<span class='lbl'>" + (WX[forced ? window.DEV.code : c.weather_code] || "clima") + (forced && !CFG.clean ? " (dev)" : "") + "</span> <b>" + Math.round(c.temperature_2m) + "°</b>" + sep +
+      "<span class='lbl'>mín</span> <b>" + Math.round(d.temperature_2m_min[0]) + "°</b> <span class='lbl'>máx</span> <b>" + Math.round(d.temperature_2m_max[0]) + "°</b>" + sep +
+      "<b>" + Math.round(c.relative_humidity_2m) + "%</b> <span class='lbl'>humedad</span>" + sep +
+      "<span class='lbl'>viento</span> <b>" + w + "</b> <span class='lbl'>km/h</span>" + (gust >= w + 10 ? " <span class='lbl'>ráfagas</span> <b>" + gust + "</b>" : "");
+    window.ENV.code = c.weather_code; window.ENV.wind = c.wind_speed_10m; window.ENV.gust = c.wind_gusts_10m; window.ENV.isDay = c.is_day;
     var sr = hourOf(d.sunrise[0]), ss = hourOf(d.sunset[0]);     // kept only as a cross-check against SunCalc (shown in the dev overlay)
     if (sr > 0 && ss > sr) { window.ENV.sunrise = sr; window.ENV.sunset = ss; window.ENV.sunriseOM = d.sunrise[0].slice(11); window.ENV.sunsetOM = d.sunset[0].slice(11); }
     if (window.Scene) Scene.skyDirty = true;
   }
   function weather() {
     var url = "https://api.open-meteo.com/v1/forecast?latitude=" + CFG.lat + "&longitude=" + CFG.lon +
-      "&current=temperature_2m,relative_humidity_2m,weather_code,is_day,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=" +
+      "&current=temperature_2m,relative_humidity_2m,weather_code,is_day,wind_speed_10m,wind_gusts_10m&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=" +
       encodeURIComponent(CFG.tz) + "&forecast_days=1";
     var x = new XMLHttpRequest(); x.open("GET", url, true); x.timeout = 12000;
     x.onload = function () {
@@ -62,7 +68,7 @@
     try { x.send(); } catch (e) { wxFail(); }
   }
   function wxFail() {
-    if (lastWx) { renderWx(lastWx.data); $("wx").innerHTML += " · <span style='color:#7a6a4a'>sin conexión</span>"; }
+    if (lastWx) { renderWx(lastWx.data); $("wx").innerHTML += "<span class='sep'>·</span><span class='warn'>sin conexión</span>"; }
     else { $("wx").textContent = "clima no disponible · sin conexión"; }
   }
   try { var cached = JSON.parse(localStorage.getItem("wx")); if (cached && cached.data) { lastWx = cached; renderWx(cached.data); } } catch (e) {}
@@ -73,7 +79,8 @@
     if (audioSrc !== "radio") return;
     $("bars").className = "bars " + (l.status === "sonando" ? "" : "off");
     $("radioSlot").textContent = l.slot.toLowerCase() + " · radio";
-    $("radioLabel").textContent = (l.station ? l.station + " · " : "") + l.status;
+    $("radioLabel").textContent = l.station || "radio";
+    $("radioSub").textContent = l.status;
     $("art").classList.add("hidden");
   }
   function spotifyUI(s) {
@@ -82,7 +89,8 @@
     if (audioSrc !== "spotify") return;
     $("bars").className = "bars " + (s.playing ? "" : "off");
     $("radioSlot").textContent = (s.slot || "spotify").toLowerCase();
-    $("radioLabel").textContent = s.track ? s.track + " · " + s.artist : (s.playing ? "spotify" : "pausa · OK para reproducir");
+    $("radioLabel").textContent = s.track ? s.track : (s.playing ? "spotify" : "pausa · OK para reproducir");
+    $("radioSub").textContent = s.track ? s.artist : (s.device || "\u00a0");
     var img = $("art"); if (s.art) { if (img.src !== s.art) img.src = s.art; img.classList.remove("hidden"); } else img.classList.add("hidden");
   }
   function radioInit() {
@@ -118,7 +126,7 @@
   function devRender() {
     if (!window.DEV.on) { if (!$("devmark").classList.contains("hidden")) $("devmark").textContent = "DEV · " + Scene.fps.value + " fps"; return; }
     var D = window.DEV, S = Scene.state(), A = S.astro, f = Scene.fps, z = Scene.size(), I = Scene.info;
-    var vals = [S.hour.toFixed(1) + "h", S.code + " " + (WX[S.code] || ""), MESES[S.month - 1].slice(0, 3), S.day, S.year, Math.round(S.wind) + "km/h", "q" + z.q, z.h + "p", "1/" + z.s];
+    var vals = [S.hour.toFixed(1) + "h", S.code + " " + (WX[S.code] || ""), MESES[S.month - 1].slice(0, 3), S.day, S.year, Math.round(S.wind) + "/" + Math.round(S.gust) + "km/h " + Weather.wind(S.windEff).name, "q" + z.q, z.h + "p", "1/" + z.s];
     var line = "";
     for (var i = 0; i < FIELDS.length; i++) line += (i === D.field ? "[" : " ") + FIELDS[i] + " " + vals[i] + (i === D.field ? "]" : " ") + " ";
     var om = window.ENV.sunriseOM != null ? "  open-meteo " + window.ENV.sunriseOM + "/" + window.ENV.sunsetOM : "";
@@ -173,6 +181,9 @@
     if (q.dev != null) CFG.devOnStart = q.dev === "1";
     if (q.radio === "0") CFG.radio = false;
     if (q.clean === "1") CFG.clean = true;        // no "(dev)" marker: for screenshots and the README GIF
+    if (q.warm != null) CFG.warm = parseFloat(q.warm);          // pre-simulate the patrons for N seconds (screenshots)
+    if (q.broker) window.BROKER_OVERRIDE = q.broker;             // e.g. http://127.0.0.1:8899 for a render on the broker's own machine
+    if (q.readonly === "1") window.SPOTIFY_READONLY = true;     // show what plays, never send play/pause/transfer (renders)
   }
 
   // ---------- boot ----------
@@ -184,6 +195,7 @@
     Sprites.start($("fg"));
     Decor.init(Sprites.painter); Ambient.init(Sprites.painter); Weather.init(Sprites.painter);
     var ok = Scene.start($("bg"));
+    if (CFG.warm) { var S0 = Scene.state(); Ambient.warm(CFG.warm, S0, Scene.light(S0)); }
     weather(); setInterval(weather, CFG.weatherEveryMs);
     if (CFG.radio !== false) radioInit();
     if (CFG.devOnStart) { window.DEV.on = true; $("dev").classList.remove("hidden"); }

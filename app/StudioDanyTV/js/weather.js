@@ -53,9 +53,14 @@
     if (flash > 0.02) { P.ctx().fillStyle = "rgba(255,255,255," + (flash * 0.35).toFixed(2) + ")"; P.ctx().fillRect(0, 0, 960, 540); }
   }
 
+  /* wind model (km/h): 0 calm < 8 <= 1 gentle < 20 <= 2 strong < 35 <= 3 storm. `s` is a 0..1.2 strength for animations. */
+  function wind(v) { v = Math.max(0, v || 0); var lvl = v < 8 ? 0 : v < 20 ? 1 : v < 35 ? 2 : 3; return { level: lvl, name: ["calma", "brisa", "viento fuerte", "temporal"][lvl], s: Math.min(1.2, v / 45) }; }
+  /* gust envelope 0..1: slow irregular swells so gusts come and go every 20-40 s */
+  function gustEnv(t) { return Math.max(0, Math.min(1, Math.sin(t * 0.23) * 0.6 + Math.sin(t * 0.61 + 2) * 0.4 + Math.sin(t * 0.07) * 0.3)); }
+
   global.Weather = {
     init: function (painter) { P = painter; R = P.R; },
-    params: params, update: update,
+    params: params, update: update, wind: wind, gustEnv: gustEnv,
     flash: function () { return flash; },
     draw: function (t, W, S, L) { drawFog(W); drawRain(t, W, S, L); drawFlash(W); }
   };

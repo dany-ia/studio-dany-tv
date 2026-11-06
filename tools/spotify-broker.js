@@ -92,6 +92,7 @@ http.createServer(async (req, res) => {
 http.createServer(async (req, res) => {
   const ip = req.socket.remoteAddress, u = new URL(req.url, "http://x");
   const send = (code, obj) => { res.writeHead(code, { "Content-Type": "application/json", "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" }); res.end(JSON.stringify(obj)); };
+  if (req.method === "OPTIONS") { res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "X-App-Key", "Access-Control-Max-Age": "600" }); return res.end(); }
   if (u.pathname === "/status") return send(200, { logged_in: !!tokens, client: ip });
   if (!allow.has(ip) || req.headers["x-app-key"] !== cfg.app_key) return send(403, { error: "forbidden" });
   try {

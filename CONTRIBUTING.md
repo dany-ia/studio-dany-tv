@@ -19,12 +19,17 @@ Thanks for looking. This is a personal showcase, but fixes and new decorations a
   the existing ones cannot express it.
 - Radio stations go in `app/StudioDanyTV/radio.json`. Only public streams that you have verified
   play on a TV (key GREEN in the dev overlay runs the station test).
+- The HUD is DOM text in Outfit (variable weight, vendored). Keep pixel fonts for in-scene signs
+  and the dev overlay only.
 - Spanish UI text uses proper accents (MIÉRCOLES, SÁBADO, ¡VIVA MÉXICO!). The pixel font in
   `js/sprites.js` covers A-Z, 0-9, ÁÉÍ, ¡ and !; extend it if you need more.
 
 ## Local preview without a TV
 Open `app/StudioDanyTV/index.html` in Chrome with `--allow-file-access-from-files` and use URL
-parameters: `?hour=23&code=95&month=12&day=31&wind=25&dev=1&radio=0`. Headless renders:
+parameters: `?hour=23&code=95&month=12&day=31&wind=25&dev=1&radio=0`. Add `warm=150` to
+pre-simulate the patrons so they are already seated, and on the machine that runs the Spotify
+broker `broker=http://127.0.0.1:8899&readonly=1` to show the real now-playing block without
+sending any playback command. Headless renders:
 ```
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --allow-file-access-from-files \
   --use-angle=swiftshader --enable-unsafe-swiftshader --window-size=1920,1080 --hide-scrollbars \

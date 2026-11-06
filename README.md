@@ -30,13 +30,26 @@ On the real panel, photographed through the watcher at sunset:
   tourists, papel picado for Cinco de Mayo and the Grito, pumpkins for Halloween, an ofrenda with
   cempasúchil and candles for Día de Muertos, Christmas lights and a piñata in December, and a
   New Year's Eve countdown. All of it is data in `decorations.json`.
-- **A bar with a schedule.** Dark and closed from 3 to 6:30 with one lamp on, the bartender back
-  at 6:30, regulars on the stools at golden hour, the grill lit at dinner, string lights from sunset.
-- **Living scene.** Palms sway with the wind, the hammock swings, a pelican flies by, a crab walks
-  its path, the Cozumel ferry and a sailboat cross the horizon, smoke rises from the fire pit,
-  fireflies at night, and the bartender wipes glasses, shakes cocktails and pours.
-- **HUD.** Big pixel clock with seconds, Spanish date, weather line (current, min/max, humidity,
-  wind), radio slot and station.
+- **A bar with a schedule.** Dark and closed from 3 to 6:30 with one lamp on. From 6:30 it is a
+  coffee bar: espresso machine, mugs with steam, a coffee bag, a basket of conchas and a
+  chalkboard that says CAFÉ, and the bartender grinds and pours the kettle. Between 11:30 and
+  12:00 the props swap one by one (cocktail first, the DANICKYS sign last) and it is the tiki bar
+  again: cocktails, shaker, limes. The grill is lit at dinner, string lights from sunset.
+- **Patrons.** Small characters walk in from the left along the sand, take a stool, chat with
+  tiny icon bubbles, drink and leave: one or two at a time by day, three at golden hour and in
+  the evening, none between 3 and 6. Now and then a dog comes with its owner, a kid digs with a
+  bucket near the shore, or someone takes a selfie (with the flash). Every pose is a cached frame.
+- **Wind you can see.** Open-Meteo's wind speed and gusts drive the palms (calm below 8 km/h,
+  gentle to 20, strong to 35, storm above), the wave height, the hammock, the string lights
+  swinging, and above ~20 km/h leaves torn from the crowns and sand streaking along the ground.
+- **Living scene.** A pelican flies by, a crab walks its path, the Cozumel ferry and a sailboat
+  cross the horizon, smoke rises from the fire pit, fireflies at night, and the bartender wipes
+  glasses, shakes cocktails and pours.
+- **HUD.** A big, smooth clock in Outfit (light weight, seconds smaller in the accent colour),
+  the Spanish date, and a weather line with hierarchy: values in the accent, labels softer. The
+  accent follows the day: sand-gold in daylight, coral around sunrise and sunset, pale cyan at
+  night. Bottom-left, the Spotify cover at 160 px (nearest-neighbour, so it reads as pixel art)
+  next to the slot, equalizer, track and artist.
 - **Spotify Connect by time of day.** Lofi Coffee in the morning, Lofi Reggae in the afternoon,
   Jazz Lofi at night: at each boundary (06/12/19) the slot's playlist starts on the chosen Connect
   speaker with shuffle on and repeat off. The HUD shows track, artist, slot and a pixelated album
@@ -147,10 +160,17 @@ lightning flash. Wind and rain raise the waves.
 Everything is drawn in 960x540 logical pixels, and CSS scales the canvas 2x with
 `image-rendering: pixelated`, so every pixel is the same size and no 1080p 2D work happens at all.
 Static art (sand, bar back, bar front, light cast, bulb halos, post effects) is painted once into
-offscreen canvases; palms and the hammock are cached as 16 and 12 quantized sway frames; only the
-bartender, critters, particles and weather are drawn fresh each frame. A lighting pass at the end
-applies the night tint (`source-atop`, so the sea behind stays untouched), twilight warmth,
-the warm cast from the string lights on counter and sand, bulb bloom, and golden-hour shadows.
+offscreen canvases; the counter props and the ridge sign are one more cached layer, repainted
+only when the bar schedule flips a prop (coffee set in the morning, tiki set from noon); palms and
+the hammock are cached as 16 and 12 quantized sway frames, with amplitude and speed from the
+effective wind (speed swelling toward the gusts on a slow envelope); patrons, the dog, the kid and
+the selfie taker are cached pose frames at 1.5x; only the bartender, string lights, critters,
+particles and weather are drawn fresh each frame. A lighting pass at the end applies the night
+tint (`source-atop`, so the sea behind stays untouched) and twilight warmth; the bar gets a
+slightly lighter version of the tint so roof, posts, bottles and sign keep a desaturated, bluish
+night palette, while the warm cast from the string lights is clipped to the sand around the bar
+and the counter top only. The bartender is drawn after that pass with his own palette, warmed by
+the bulbs instead of stained by the cast, and the bulbs and their bloom stay bright.
 
 ### The month engine (`js/decor.js` + `decorations.json`)
 
@@ -269,7 +289,7 @@ reference/             the original ambient mockup this started from
 - Radio: [SomaFM](https://somafm.com/), [laut.fm](https://laut.fm/), [FluxFM](https://www.fluxfm.de/),
   [I Love Radio](https://www.ilovemusic.de/), [Zeno.FM](https://zeno.fm/). Thank them, support them.
 - Remote control: [samsungtvws](https://github.com/xchwarze/samsung-tv-ws-api).
-- Fonts: Press Start 2P and VT323 (SIL OFL 1.1).
+- Fonts: Outfit (HUD), Press Start 2P and VT323 (all SIL OFL 1.1, vendored in `fonts/`).
 - Built with Claude Code.
 
 ## En español

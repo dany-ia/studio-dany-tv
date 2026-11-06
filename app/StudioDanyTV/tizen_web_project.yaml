@@ -51,6 +51,8 @@ files:
   - fonts/VT323-Regular.ttf
   - fonts/OFL-PressStart2P.txt
   - fonts/OFL-VT323.txt
+  - fonts/Outfit-Variable.ttf
+  - fonts/OFL-Outfit.txt
 
 # list of files to exclude based on the matched patterns
 excludes:
