@@ -4,7 +4,7 @@ Network remote control for the Samsung TV (Tizen WebSocket remote API, port 8002
 LAN only. The token lives in .local/tv-token.txt (git-ignored). Run with .local/venv/bin/python.
 
   tvremote.py pair                 -> first connection; accept the "Allow" prompt on the TV
-  tvremote.py key KEY_HOME [KEY_RETURN ...] [--delay 0.6]
+  tvremote.py key KEY_HOME [KEY_RETURN ...] [--delay 0.7]
   tvremote.py info                 -> device info (REST 8001)
   tvremote.py app <app-id>         -> install/running state of an app (REST)
   tvremote.py launch <app-id>      -> launch an installed app over the remote channel
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     if not a: print(__doc__); sys.exit(1)
     if a[0] == "pair": cmd_pair()
     elif a[0] == "key":
-        delay = 0.6
+        delay = 0.7
         if "--delay" in a: i = a.index("--delay"); delay = float(a[i + 1]); del a[i:i + 2]
         cmd_key(a[1:], delay)
     elif a[0] == "info": print(json.dumps(rest("")["device"], indent=1, ensure_ascii=False))

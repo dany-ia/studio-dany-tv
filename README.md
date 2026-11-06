@@ -17,7 +17,12 @@ deployed entirely from a Mac by an AI coding agent working through a phone camer
 |---|---|---|---|
 | ![](docs/images/render-noon.jpg) | ![](docs/images/render-night.jpg) | ![](docs/images/render-muertos.jpg) | ![](docs/images/render-summer.jpg) |
 
-On the real panel, photographed through the watcher at sunset:
+On the real panel, photographed through the watcher (the Mac's camera): the coffee bar at 09:00,
+golden hour with three regulars and a dog, and 22:00 with the bulbs on, all at 60 fps.
+
+| 09:00 | 17:00 | 22:00 |
+|---|---|---|
+| ![](docs/images/tv-v2-09h.jpg) | ![](docs/images/tv-v2-17h.jpg) | ![](docs/images/tv-v2-22h.jpg) |
 
 ![The TV at 18:15](docs/images/tv-sunset-photo.jpg)
 

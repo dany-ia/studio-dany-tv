@@ -94,9 +94,24 @@ The TV build needs `app/StudioDanyTV/config.local.json` (broker URL, app key, de
 To move the broker to another machine: copy `.local/spotify/`, run the script there, update `brokerUrl`
 in `config.local.json`, rebuild. Without the broker the app plays the stream radio instead.
 
+## 5a. If the router rebooted (IPs changed)
+Seen 2026-11-06: a router reboot moved the Mac from .19 to .11 and the TV from .9 to .16. Symptoms:
+sdb "failed to connect", the remote "No route to host", Spotify on the TV falls back to radio.
+Find the TV again by scanning port 8001 (`curl http://192.168.0.N:8001/api/v2/` for N in 2..254,
+the TV answers with its name) and fix, in this order:
+1. The TV's Developer Mode **Host PC IP** must equal the Mac's current IP, or sdb is refused.
+   Quickest: give the Mac its old IP back (`sudo networksetup -setmanual Wi-Fi 192.168.0.19
+   255.255.255.0 192.168.0.1`, undo with `-setdhcp Wi-Fi`). Durable: DHCP reservations in the
+   router for the Mac and the TV.
+2. `.local/tv.env`: TV_IP / TV_SERIAL to the TV's current IP, then `remote-device-cli.js connect`.
+3. `.local/spotify/config.json`: add the TV's IP to `allow_ips`, restart the broker.
+4. `app/StudioDanyTV/config.local.json`: `brokerUrl` must be the Mac's IP, then rebuild + install.
+
 ## 5c. Remote control from the Mac (optional)
 `.local/venv/bin/python tools/tvremote.py pair` once (accept the prompt on the TV), then
 `tools/tvremote.py key KEY_HOME` etc. Needs `.local/tv.env` with `TV_IP` and `TV_MAC`.
+Inside the app send one key per call (or `--delay 0.7`): bursts of keys are dropped by the web app,
+although the TV's own menus accept them.
 
 ## 6. Rollback / recovery
 - The app is a normal user app. **Back** on the remote exits it; **Home** always opens Smart Hub.
