@@ -203,7 +203,6 @@
   }
   var FIRE = { x: 300, y: 505 };
   function firePit(t, L) {                                     // lit after sunset: flickering flames
-    var on = L.lightsOn; if (on < 0.05) return;
     for (var i = 0; i < 6; i++) { var h = 6 + Math.round(Math.abs(Math.sin(t * 9 + i * 1.3)) * 10), w = 4 + (i % 2), x = FIRE.x - 10 + i * 4 + Math.round(Math.sin(t * 7 + i) * 1.5);
       R(x, FIRE.y - 6 - h, w, h, i % 3 === 0 ? "#ffd36b" : "#ff9d3b"); R(x + 1, FIRE.y - 6 - Math.round(h * 0.5), w - 2, Math.round(h * 0.5), "#ffe8a8"); }
     R(FIRE.x - 2, FIRE.y - 9, 4, 3, "#fff6dc");
@@ -216,8 +215,13 @@
     gr.addColorStop(0, color.replace("A", a.toFixed(3))); gr.addColorStop(1, color.replace("A", "0"));
     g.fillStyle = gr; g.fillRect(cx - r, cy - r, r * 2, r * 2);
   }
-  function lighting(S, L, closed) {
+  function lighting(S, L, closed, W) {
     var lightsOn = closed ? 0 : L.lightsOn;
+    if (W && W.cloud > 0.3 && L.d > 0.05) {                    // overcast / rainy daylight: cooler, flatter light on the sprites
+      g.globalCompositeOperation = "source-atop"; g.fillStyle = "rgba(90,100,130," + (0.28 * W.cloud * L.d).toFixed(3) + ")";
+      g.fillRect(0, SHORE_Y, LW, LH - SHORE_Y); g.fillRect(PALMS[0], PALMS[1], PALMS[2], SHORE_Y - PALMS[1]); g.fillRect(BAR[0], BAR[1], BAR[2], SHORE_Y - BAR[1]);
+      g.globalCompositeOperation = "source-over";
+    }
     // one combined tint fill: night blue-grey (a1) then twilight warmth (a2), merged into a single rgba.
     // Night sand ends up blue-grey (not white); only the bar's light cast warms it back up locally.
     var a1 = 0.74 * (1 - L.d), a2 = 0.16 * L.tw, A = 1 - (1 - a1) * (1 - a2);
@@ -269,22 +273,34 @@
 
   /* ---------- per frame (draws straight into the 960x540 #fg canvas; CSS scales it 2x, nearest neighbour) ----------
      Every cached layer is drawn cropped to its bounding box: on this GPU the cost is per pixel touched. */
-  var BAR = [X - 60, 240, 420, 300], PALMS = [90, 100, 340, 370];                // bounding boxes [x, y, w, h]
-  function blit(layer, b) { g.drawImage(layer, b[0], b[1], b[2], b[3], b[0], b[1], b[2], b[3]); }
+  var BAR = [X - 60, 240, 420, 300], PALMS = [90, 100, 340, 370], SANDBAND = [0, 380, LW, LH - 380];   // bounding boxes [x, y, w, h]
+  function blit(layer, b) { if (layer) g.drawImage(layer, b[0], b[1], b[2], b[3], b[0], b[1], b[2], b[3]); }
+  var lastT = 0;
   function draw(t, S, L) {
+    var dt = lastT ? Math.min(0.1, t - lastT) : 0.016; lastT = t;
+    var W = S.weather || { cloud: 0, rain: 0, fog: 0, storm: false }, D = global.Decor, A = global.Ambient, WX = global.Weather;
     g = fctx; g.clearRect(0, 0, LW, LH);
+    if (A) { A.sky(t, L); A.horizon(t, L); }                      // pelican in the sky, ferry / sailboat on the horizon
     g.drawImage(layers.sand, 0, SHORE_Y, LW, LH - SHORE_Y, 0, SHORE_Y, LW, LH - SHORE_Y);
     shadows(L);
+    if (D) blit(D.layer("sand", S.month, S.day), SANDBAND);
     var wind = S.wind || 0, amp = 2 + wind * 0.25, phase = t * (0.8 + wind * 0.03);
     if (Object.keys(palmCache).length > 80) palmCache = {};                      // wind changed a lot: drop stale frames
     palmAt(0, 156, 456, 234, 30, amp, phase, 0); palmAt(1, 348, 450, 258, -24, amp * 0.8, phase + 1.3, 2);
     hammockAt(172, 341, 316, 1.0 + wind * 0.06, t * 0.7);      // attached where the trunks pass y=316
-    firePit(t, L);
+    var fireLit = L.lightsOn > 0.05 && W.rain < 0.3;            // rain puts the fire out
+    if (fireLit) firePit(t, L);
+    if (A) A.sand(t, dt, S, L, fireLit);                          // crab, fireflies, grill, smoke
     blit(layers.barBack, BAR);
+    if (D) blit(D.layer("back", S.month, S.day), BAR);
     var closed = S.hour >= 3 && S.hour < 6.5;                   // bar closed and dark, one lamp on
     if (!closed) bartender(t, S);
     blit(layers.barFront, BAR);
-    lighting(S, L, closed);
+    if (D) { blit(D.layer("front", S.month, S.day), BAR); D.dynamic(new Date()); }
+    if (A) A.front(t, S);                                         // patrons at golden hour
+    lighting(S, L, closed, W);
+    if (D) D.lights(L, t);                                        // candle / Christmas-light glows stay bright at night
+    if (WX) WX.draw(t, W, S, L);                                  // fog tint, rain, lightning
     if (post.on) g.drawImage(layers.post, 0, 0);                // vignette + scanlines, one cached layer
   }
   var post = { on: true, scan: true, vignette: true };
@@ -308,6 +324,8 @@
       buildPost(); g = fctx;
     },
     setPost: function (o) { for (var k in o) post[k] = o[k]; buildPost(); },
-    draw: draw, text: text
+    draw: draw, text: text,
+    /* painter shared with decor.js / ambient.js / weather.js: they draw on whatever context is current */
+    painter: { R: R, text: text, radial: radial, ctx: function () { return g; }, withContext: function (c, fn) { var G = g; g = c; fn(); g = G; } }
   };
 })(window);

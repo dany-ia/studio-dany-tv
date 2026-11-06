@@ -19,10 +19,10 @@
   function state() {
     var E = global.ENV || {}, D = global.DEV || {}, d = new Date();     // overrides apply even with the overlay hidden (app.js clears them)
     var code = D.code != null ? D.code : (E.code != null ? E.code : 0);
-    var cloud = code === 0 ? 0.05 : code === 1 ? 0.25 : code === 2 ? 0.5 : code === 3 ? 0.9 : (code >= 45 && code < 50) ? 0.7 : 0.95;
+    var wx = global.Weather ? global.Weather.params(code) : { cloud: 0.05, rain: 0, fog: 0, storm: false };
     return {
       hour: D.hour != null ? D.hour : d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600,
-      sunrise: E.sunrise || 6.5, sunset: E.sunset || 18.1, cloud: cloud, code: code,
+      sunrise: E.sunrise || 6.5, sunset: E.sunset || 18.1, cloud: wx.cloud, code: code, weather: wx,
       wind: D.wind != null ? D.wind : (E.wind != null ? E.wind : 10),
       month: D.month != null ? D.month : d.getMonth() + 1, day: D.day != null ? D.day : d.getDate(),
       moon: moonPhase(d)
@@ -40,10 +40,12 @@
              sunX: 0.12 + 0.50 * cdf, sunY: 0.46 + 0.52 * Math.sin(PI * cdf), night: ss(0.03, -0.10, elev), lightsOn: ss(0.08, -0.02, elev) };
   }
 
+  var flash = 0;
   function setUniforms(p, S, t) {
     p.set2f("u_res", W, H); p.set1f("u_time", t);
     p.set1f("u_hour", S.hour); p.set1f("u_sunrise", S.sunrise); p.set1f("u_sunset", S.sunset);
     p.set1f("u_cloud", S.cloud); p.set1f("u_wind", S.wind); p.set1f("u_moon", S.moon); p.set1f("u_quality", quality);
+    p.set1f("u_rain", S.weather.rain); p.set1f("u_fog", S.weather.fog); p.set1f("u_flash", flash);
   }
 
   function resize(w, h) {
@@ -57,6 +59,7 @@
     fps.frames++; fps.acc += dt; if (dt > fps.maxFrame) fps.maxFrame = dt;
     if (fps.acc >= 1000) { fps.value = Math.round(fps.frames * 1000 / fps.acc); fps.worst = Math.round(fps.maxFrame); fps.frames = 0; fps.acc = 0; fps.maxFrame = 0; }
     var S = state(), L = light(S);
+    if (global.Weather) { var f = global.Weather.update(t, dt / 1000, S.weather); if (f > 0.02 || flash > 0.02) global.Scene.skyDirty = true; flash = f; }
 
     if (frame % skyEvery === 0 || global.Scene.skyDirty) {       // sky pass to texture every N frames
       gl.bindFramebuffer(gl.FRAMEBUFFER, skyRT.fb); gl.viewport(0, 0, W, H);

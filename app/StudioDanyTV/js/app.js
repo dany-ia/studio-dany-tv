@@ -37,8 +37,8 @@
   function hourOf(iso) { var m = /T(\d\d):(\d\d)/.exec(iso || ""); return m ? (+m[1]) + (+m[2]) / 60 : -1; }
   var lastWx = null;
   function renderWx(j) {
-    var c = j.current, d = j.daily;
-    $("wx").innerHTML = (WX[c.weather_code] || "clima") + " <b>" + Math.round(c.temperature_2m) + "°</b> · " +
+    var c = j.current, d = j.daily, forced = window.DEV && window.DEV.code != null;
+    $("wx").innerHTML = (WX[forced ? window.DEV.code : c.weather_code] || "clima") + (forced ? " (dev)" : "") + " <b>" + Math.round(c.temperature_2m) + "°</b> · " +
       Math.round(d.temperature_2m_min[0]) + "° / " + Math.round(d.temperature_2m_max[0]) + "° · " +
       Math.round(c.relative_humidity_2m) + "% hum · " + Math.round(c.wind_speed_10m) + " km/h";
     window.ENV.code = c.weather_code; window.ENV.wind = c.wind_speed_10m; window.ENV.isDay = c.is_day;
@@ -83,7 +83,9 @@
   var CODES = [0, 1, 2, 3, 45, 51, 61, 63, 65, 80, 82, 95];
   var FIELDS = ["hora", "clima", "mes", "día", "viento", "calidad", "res", "cielo"];
   var RES = [540, 720, 1080], SKY = [1, 2, 4];
-  var PRESETS = { 49: 6.5, 50: 12.0, 51: 18.25, 52: 23.0 };     // keys 1-4 jump to review hours; 5 clears
+  // review presets on the number keys: 1-4 hours, 6 Día de Muertos, 7 Navidad, 8 lluvia, 9 tormenta; 5 clears everything
+  var PRESETS = { 49: { hour: 6.5 }, 50: { hour: 12.0 }, 51: { hour: 18.25 }, 52: { hour: 23.0 },
+                  54: { hour: 20.0, month: 11, day: 2, code: 0 }, 55: { hour: 19.0, month: 12, day: 20, code: 1 }, 56: { hour: 15.0, code: 63 }, 57: { hour: 21.0, code: 95 } };
   function devAdjust(dir) {
     var D = window.DEV, S = Scene.state();
     if (D.field === 0) D.hour = ((D.hour == null ? Math.floor(S.hour) : D.hour) + dir * 0.5 + 24) % 24;
@@ -94,17 +96,18 @@
     if (D.field === 5) { D.q = (D.q + dir + 3) % 3; Scene.setQuality(D.q); }
     if (D.field === 6) { D.res = RES[(RES.indexOf(D.res) + dir + 3) % 3]; Scene.setRes(D.res * 16 / 9, D.res); }
     if (D.field === 7) { D.sky = SKY[(SKY.indexOf(D.sky) + dir + 3) % 3]; Scene.setSkyEvery(D.sky); }
-    Scene.skyDirty = true;
+    Scene.skyDirty = true; refreshWx();
   }
+  function refreshWx() { if (lastWx) renderWx(lastWx.data); }
   function devRender() {
-    if (!window.DEV.on) return;
+    if (!window.DEV.on) { if (!$("devmark").classList.contains("hidden")) $("devmark").textContent = "DEV · " + Scene.fps.value + " fps"; return; }
     var D = window.DEV, S = Scene.state(), f = Scene.fps, z = Scene.size(), I = Scene.info;
     var vals = [S.hour.toFixed(1) + "h", S.code + " " + (WX[S.code] || ""), MESES[S.month - 1].slice(0, 3), S.day, Math.round(S.wind) + "km/h", "q" + z.q, z.h + "p", "1/" + z.s];
     var line = "";
     for (var i = 0; i < FIELDS.length; i++) line += (i === D.field ? "[" : " ") + FIELDS[i] + " " + vals[i] + (i === D.field ? "]" : " ") + " ";
     $("dev").textContent = "FPS " + f.value + " (peor " + f.worst + " ms)  bg " + z.w + "x" + z.h + " q" + z.q + " cielo 1/" + z.s + "  " + I.gl + "  gpu " + I.renderer.slice(0, 22) + "\n" +
       "bench " + (I.bench || "…") + "   radio " + (Radio.testLog() || "(VERDE: probar estaciones)") + "\n" +
-      line + "\n◄► campo  ▲▼ valor  1-4 horas 06:30/12:00/18:15/23:00  5 hora real  ROJO reset  0 cerrar   sol " + window.ENV.sunrise.toFixed(2) + "/" + window.ENV.sunset.toFixed(2);
+      line + "\n◄► campo  ▲▼ valor  1-4 horas  6 muertos  7 navidad  8 lluvia  9 tormenta  5 real  ROJO reset  VERDE radio  0 cerrar   sol " + window.ENV.sunrise.toFixed(2) + "/" + window.ENV.sunset.toFixed(2);
   }
 
   // ---------- keys ----------
@@ -113,7 +116,7 @@
     var names = ["MediaPlayPause", "MediaPlay", "MediaPause", "ColorF0Red", "ColorF1Green", "ColorF2Yellow", "ColorF3Blue", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
     for (var i = 0; i < names.length; i++) { try { tizen.tvinputdevice.registerKey(names[i]); } catch (e) {} }
   }
-  function clearOverrides() { var D = window.DEV; D.hour = D.code = D.month = D.day = D.wind = null; Scene.skyDirty = true; $("devmark").classList.add("hidden"); }
+  function clearOverrides() { var D = window.DEV; D.hour = D.code = D.month = D.day = D.wind = null; Scene.skyDirty = true; $("devmark").classList.add("hidden"); refreshWx(); }
   function hasOverrides() { var D = window.DEV; return D.hour != null || D.code != null || D.month != null || D.day != null || D.wind != null; }
   var hideTimer = null;
   function onKey(e) {
@@ -131,8 +134,8 @@
       if (k === KEY.DOWN) { devAdjust(-1); devRender(); return; }
       if (k === KEY.RED) { clearOverrides(); devRender(); return; }
       if (k === KEY.GREEN) { Radio.test(7); devRender(); return; }
-      if (PRESETS[k] != null) { D.hour = PRESETS[k]; Scene.skyDirty = true; devRender(); return; }
-      if (k === KEY.FIVE) { D.hour = null; Scene.skyDirty = true; devRender(); return; }
+      if (PRESETS[k] != null) { var pr = PRESETS[k]; D.hour = pr.hour != null ? pr.hour : null; D.month = pr.month != null ? pr.month : null; D.day = pr.day != null ? pr.day : null; D.code = pr.code != null ? pr.code : null; Scene.skyDirty = true; refreshWx(); devRender(); return; }
+      if (k === KEY.FIVE) { clearOverrides(); devRender(); return; }
     }
     if (k === KEY.ENTER || k === KEY.PLAYPAUSE || k === KEY.PLAY || k === KEY.PAUSE) { toggleRadio(); e.preventDefault(); }
     else if (k === KEY.LEFT) Radio.next(-1);
@@ -158,6 +161,7 @@
     registerKeys(); document.addEventListener("keydown", onKey);
     try { webapis.appcommon.setScreenSaver(webapis.appcommon.AppCommonScreenSaverState.SCREEN_SAVER_OFF); } catch (e) {}
     Sprites.start($("fg"));
+    Decor.init(Sprites.painter); Ambient.init(Sprites.painter); Weather.init(Sprites.painter);
     var ok = Scene.start($("bg"));
     weather(); setInterval(weather, CFG.weatherEveryMs);
     if (CFG.radio !== false) radioInit();

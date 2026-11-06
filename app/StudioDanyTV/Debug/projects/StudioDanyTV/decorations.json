@@ -1,0 +1,434 @@
+{
+  "_comment": "Month / holiday decorations (Mexico calendar). A rule applies when today is within from..to (MM-DD, inclusive). Several rules may apply at once. Layers are drawn by js/decor.js; z is 'sand' (beach), 'back' (roof / behind the bartender) or 'front' (counter / in front). Coordinates are on the 960x540 grid; the bar's left edge is x=588, counter top y=420, roof eave y=312, ridge y=252.",
+  "rules": [
+    {
+      "id": "reyes",
+      "from": "01-01",
+      "to": "01-08",
+      "layers": [
+        {
+          "type": "rosca",
+          "x": 700,
+          "y": 414,
+          "z": "front"
+        },
+        {
+          "type": "sign",
+          "text": "ROSCA DE REYES",
+          "x": 690,
+          "y": 300,
+          "z": "back"
+        }
+      ]
+    },
+    {
+      "id": "febrero",
+      "from": "02-01",
+      "to": "02-28",
+      "layers": [
+        {
+          "type": "hearts",
+          "x1": 560,
+          "x2": 920,
+          "y": 334,
+          "z": "back"
+        },
+        {
+          "type": "sign",
+          "text": "14 DE FEBRERO",
+          "x": 690,
+          "y": 300,
+          "fg": "#e8453c",
+          "z": "back"
+        }
+      ]
+    },
+    {
+      "id": "primavera",
+      "from": "03-01",
+      "to": "03-31",
+      "layers": [
+        {
+          "type": "flowers",
+          "x": 60,
+          "y": 470,
+          "n": 7,
+          "z": "sand"
+        },
+        {
+          "type": "flowers",
+          "x": 400,
+          "y": 505,
+          "n": 5,
+          "z": "sand"
+        },
+        {
+          "type": "sign",
+          "text": "EQUINOCCIO",
+          "x": 690,
+          "y": 300,
+          "fg": "#1f7a3a",
+          "z": "back"
+        }
+      ]
+    },
+    {
+      "id": "semana-santa",
+      "from": "04-01",
+      "to": "04-30",
+      "layers": [
+        {
+          "type": "umbrella",
+          "x": 60,
+          "y": 470,
+          "c1": "#ff5e5e",
+          "c2": "#fff2cc",
+          "z": "sand"
+        },
+        {
+          "type": "umbrella",
+          "x": 500,
+          "y": 525,
+          "c1": "#2bb3a9",
+          "c2": "#f6f6f6",
+          "z": "sand"
+        },
+        {
+          "type": "tourist",
+          "x": 90,
+          "y": 500,
+          "pose": "lying",
+          "c": "#ffd36b",
+          "z": "sand"
+        },
+        {
+          "type": "tourist",
+          "x": 440,
+          "y": 520,
+          "pose": "sitting",
+          "c": "#5ea8ff",
+          "z": "sand"
+        },
+        {
+          "type": "tourist",
+          "x": 250,
+          "y": 450,
+          "pose": "standing",
+          "c": "#ff9ad5",
+          "z": "sand"
+        }
+      ]
+    },
+    {
+      "id": "madres",
+      "from": "05-06",
+      "to": "05-12",
+      "layers": [
+        {
+          "type": "flowers",
+          "x": 640,
+          "y": 418,
+          "n": 6,
+          "z": "front"
+        },
+        {
+          "type": "sign",
+          "text": "FELIZ DÍA MAMÁ",
+          "x": 690,
+          "y": 300,
+          "fg": "#e8453c",
+          "z": "back"
+        }
+      ]
+    },
+    {
+      "id": "cinco-mayo",
+      "from": "05-01",
+      "to": "05-06",
+      "layers": [
+        {
+          "type": "papel",
+          "x1": 560,
+          "x2": 920,
+          "y": 334,
+          "colors": [
+            "#2f9e4f",
+            "#ffffff",
+            "#e8453c",
+            "#ffd36b",
+            "#5ea8ff",
+            "#ff9ad5"
+          ],
+          "z": "back"
+        }
+      ]
+    },
+    {
+      "id": "tiburon-ballena",
+      "from": "06-01",
+      "to": "06-30",
+      "layers": [
+        {
+          "type": "whalesign",
+          "x": 480,
+          "y": 440,
+          "z": "sand"
+        }
+      ]
+    },
+    {
+      "id": "padres",
+      "from": "06-15",
+      "to": "06-21",
+      "layers": [
+        {
+          "type": "sign",
+          "text": "FELIZ DÍA PAPÁ",
+          "x": 690,
+          "y": 300,
+          "fg": "#1f7a3a",
+          "z": "back"
+        }
+      ]
+    },
+    {
+      "id": "verano",
+      "from": "07-01",
+      "to": "08-31",
+      "layers": [
+        {
+          "type": "umbrella",
+          "x": 50,
+          "y": 465,
+          "c1": "#ff5e5e",
+          "c2": "#fff2cc",
+          "z": "sand"
+        },
+        {
+          "type": "umbrella",
+          "x": 430,
+          "y": 440,
+          "c1": "#ffd36b",
+          "c2": "#2bb3a9",
+          "z": "sand"
+        },
+        {
+          "type": "umbrella",
+          "x": 520,
+          "y": 525,
+          "c1": "#5ea8ff",
+          "c2": "#f6f6f6",
+          "z": "sand"
+        },
+        {
+          "type": "tourist",
+          "x": 80,
+          "y": 500,
+          "pose": "lying",
+          "c": "#ff9d3b",
+          "z": "sand"
+        },
+        {
+          "type": "tourist",
+          "x": 460,
+          "y": 470,
+          "pose": "sitting",
+          "c": "#9bff8a",
+          "z": "sand"
+        },
+        {
+          "type": "tourist",
+          "x": 540,
+          "y": 520,
+          "pose": "lying",
+          "c": "#ff9ad5",
+          "z": "sand"
+        },
+        {
+          "type": "rake",
+          "x": 128,
+          "y": 440,
+          "z": "sand"
+        }
+      ]
+    },
+    {
+      "id": "patria",
+      "from": "09-01",
+      "to": "09-30",
+      "layers": [
+        {
+          "type": "papel",
+          "x1": 560,
+          "x2": 920,
+          "y": 334,
+          "colors": [
+            "#2f9e4f",
+            "#ffffff",
+            "#e8453c"
+          ],
+          "z": "back"
+        },
+        {
+          "type": "flagmx",
+          "x": 575,
+          "y": 440,
+          "z": "front"
+        },
+        {
+          "type": "flagmx",
+          "x": 915,
+          "y": 440,
+          "z": "front"
+        }
+      ]
+    },
+    {
+      "id": "grito",
+      "from": "09-15",
+      "to": "09-16",
+      "layers": [
+        {
+          "type": "sign",
+          "text": "¡VIVA MÉXICO!",
+          "x": 690,
+          "y": 300,
+          "fg": "#e8453c",
+          "z": "back"
+        }
+      ]
+    },
+    {
+      "id": "halloween",
+      "from": "10-20",
+      "to": "10-31",
+      "layers": [
+        {
+          "type": "pumpkin",
+          "x": 620,
+          "y": 408,
+          "z": "front"
+        },
+        {
+          "type": "pumpkin",
+          "x": 880,
+          "y": 408,
+          "z": "front"
+        },
+        {
+          "type": "pumpkin",
+          "x": 470,
+          "y": 500,
+          "big": true,
+          "z": "sand"
+        }
+      ]
+    },
+    {
+      "id": "muertos",
+      "from": "11-01",
+      "to": "11-02",
+      "layers": [
+        {
+          "type": "papel",
+          "x1": 560,
+          "x2": 920,
+          "y": 334,
+          "colors": [
+            "#ff9d3b",
+            "#c4a2ff",
+            "#ff9ad5",
+            "#5ef2ff",
+            "#ffd36b"
+          ],
+          "z": "back"
+        },
+        {
+          "type": "ofrenda",
+          "x": 700,
+          "y": 420,
+          "z": "front"
+        },
+        {
+          "type": "marigolds",
+          "x": 200,
+          "y": 505,
+          "n": 9,
+          "z": "sand"
+        }
+      ]
+    },
+    {
+      "id": "noviembre",
+      "from": "11-03",
+      "to": "11-30",
+      "layers": [
+        {
+          "type": "turkey",
+          "x": 640,
+          "y": 418,
+          "z": "front"
+        },
+        {
+          "type": "leaves",
+          "x": 60,
+          "y": 470,
+          "n": 12,
+          "z": "sand"
+        }
+      ]
+    },
+    {
+      "id": "navidad",
+      "from": "12-01",
+      "to": "12-30",
+      "layers": [
+        {
+          "type": "xmaslights",
+          "z": "back"
+        },
+        {
+          "type": "xmaspalm",
+          "x": 470,
+          "y": 470,
+          "z": "sand"
+        },
+        {
+          "type": "pinata",
+          "x": 640,
+          "y": 326,
+          "z": "back"
+        },
+        {
+          "type": "gifts",
+          "x": 440,
+          "y": 500,
+          "z": "sand"
+        }
+      ]
+    },
+    {
+      "id": "anonuevo",
+      "from": "12-31",
+      "to": "12-31",
+      "layers": [
+        {
+          "type": "xmaslights",
+          "z": "back"
+        },
+        {
+          "type": "countdown",
+          "x": 690,
+          "y": 300,
+          "z": "back"
+        },
+        {
+          "type": "gifts",
+          "x": 440,
+          "y": 500,
+          "z": "sand"
+        }
+      ]
+    }
+  ]
+}
