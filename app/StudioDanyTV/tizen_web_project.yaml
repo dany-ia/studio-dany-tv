@@ -31,6 +31,9 @@ files:
   - icon.png
   - index.html
   - js/app.js
+  - js/astro.js
+  - js/vendor/suncalc.js
+  - js/vendor/LICENSE-suncalc.txt
   - js/gl.js
   - js/shaders.js
   - js/sprites.js

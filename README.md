@@ -19,10 +19,10 @@ On the real panel, photographed through the watcher at sunset:
 
 ## What it does
 
-- **Sky by the real clock.** Open-Meteo gives today's sunrise and sunset for the bar's coordinates;
-  the sky interpolates pre-dawn, sunrise, day, golden hour, sunset, blue hour and night. The sun and
-  moon travel across the sky, the moon shows its real phase, stars twinkle and the Milky Way comes
-  out at night.
+- **Sky by real astronomy.** SunCalc gives the real sun and moon positions for the bar's
+  coordinates; the sky interpolates pre-dawn, sunrise, day, golden hour, sunset, blue hour and
+  night. The moon rises and sets at the real times with its real phase and orientation, stars
+  twinkle and the Milky Way comes out on dark nights (a full moon washes them out).
 - **Weather by Open-Meteo.** The WMO weather code and wind speed drive clouds, rain over the sea
   and drops on the palapa, puddles on the counter, fog, lightning storms, wave height and palm sway.
   Night and rain still look cozy under the string lights.
@@ -87,22 +87,50 @@ flowchart LR
 Three layers are composited by the TV's browser: the WebGL canvas (sky, sea, sand base), the 2D
 sprite canvas on top (transparent above the shore line), and the DOM HUD.
 
+### Real astronomy (`js/astro.js` on [SunCalc](https://github.com/mourner/suncalc), vendored, MIT)
+
+Nothing in the sky is decorative. For the bar's coordinates and the scene's Date (real, or
+forced through the dev overlay), `astro.js` computes the sun's altitude and azimuth, the day's
+times (dawn, sunrise, golden hour, sunset, dusk, night), the moon's altitude and azimuth, its
+illuminated fraction and phase, the orientation of its bright limb as seen from the beach
+(bright-limb angle minus parallactic angle), and moonrise/moonset. The painting faces south:
+east is on the left, west on the right. Azimuth is compressed horizontally (a 270° window fits
+the frame) and altitude is linear in degrees; timing, altitude, phase and orientation are real.
+So the moon rises, crosses and sets at the real times and is simply absent when below the
+horizon, the crescent's horns point the right way, and the moon path on the water is as bright as
+the illuminated fraction. Stars and the Milky Way fade with twilight and with moonlight.
+
+Verified against the US Naval Observatory (rise/set, illumination) and NASA's Dial-a-Moon
+(age, illumination at 23:00) for Playa del Carmen, 2026:
+
+| Date | Reference | SunCalc in the app |
+|---|---|---|
+| Nov 5 | waning crescent 13% (NASA 23:00: 11.3%, age 26.3 d); moonrise 03:36, moonset 15:49; sunrise 06:53, sunset 18:11 | 12.4%, age 26.2 d; moonrise 03:38, moonset 15:55; sunrise 06:53, sunset 18:12. At 18:17 the moon is 32° below the horizon: not drawn |
+| Nov 24 | full moon 100% (09:53); moonset 07:03, moonrise 18:10; sunrise 07:04, sunset 18:06 | 99.8%, age 14.3 d; moonset 07:03, moonrise 18:04; sunrise 07:05, sunset 18:07. At 23:00 the moon stands 61.7° high in the ENE |
+| Dec 9 | waxing crescent 1% (new moon Dec 8 19:52); moonrise 07:49, moonset 18:40; sunrise 07:13, sunset 18:08 | 0.7%, age 0.8 d; moonrise 07:51, moonset 18:45; sunrise 07:14, sunset 18:09 |
+
+Largest differences: 6 minutes on a moonset, about 1% in illumination, which is the precision
+SunCalc advertises. Open-Meteo's sunrise/sunset are kept only as a cross-check in the dev overlay,
+which also shows the phase name in Spanish, illumination, age, altitude/azimuth and rise/set times
+for any forced date (year, month, day and hour are all forceable).
+
 ### The sky and sea shaders (`js/shaders.js`)
 
-The light model is shared by both passes and by the sprite layer. With sunrise `r` and sunset
-`s` in hours, `df = (hour - r) / (s - r)` is the fraction of daytime elapsed and `nf` the
-fraction of the night. The light elevation is `sin(π·df)` by day and `-sin(π·nf)` by night, so it
-crosses zero exactly at sunrise and sunset. Two scalars come out of it: `d`, the daylight amount
-(a smoothstep of the elevation), and `tw`, a twilight bump that peaks when the sun is on the
-horizon. Every colour in the sky is a blend of three palettes (night, twilight, day) weighted by
-`d` and `tw`, so dawn and dusk get their pink and orange horizon for free.
+The light model is shared by both passes and by the sprite layer. From the real sun altitude
+`a`, the elevation is `sin(a)` (so `-0.10` is civil dusk, 6° below the horizon). Two scalars come
+out of it: `d`, the daylight amount (a smoothstep of the elevation), and `tw`, a twilight bump
+that peaks when the sun is on the horizon. Every colour in the sky is a blend of three palettes
+(night, twilight, day) weighted by `d` and `tw`, so dawn and dusk get their pink and orange
+horizon for free.
 
 The sky pass draws the gradient, the sun (glow mixed in rather than added, so it never
 saturates to a blob), stars from a per-cell hash with a time-based twinkle, a Milky Way band of
-fbm noise, the moon as a lit disc minus an offset dark disc (the offset is the phase), and clouds
-as fbm noise sampled in perspective (divided by height above the horizon) so they flatten toward
-the horizon and drift with the wind. Because the sky changes slowly, this pass renders to a
-texture only every 4th frame, which is what makes the 5-octave quality tier affordable.
+fbm noise, the moon at its real position with the terminator drawn as the ellipse
+`u = -k·sqrt(1 - v²)` in disc coordinates oriented along the bright limb (`k = 2·fraction - 1`,
+plus faint earthshine on the dark side), and clouds as fbm noise sampled in perspective (divided
+by height above the horizon) so they flatten toward the horizon and drift with the wind. Because
+the sky changes slowly, this pass renders to a texture only every 4th frame, which is what makes
+the 5-octave quality tier affordable.
 
 The main pass runs every frame. Above the horizon it just samples the sky texture. The sea gets
 a deep-to-shallow Caribbean palette by distance to the shore, a reflection of the real sky sampled
@@ -205,7 +233,9 @@ reference/             the original ambient mockup this started from
   original workflow.
 - Toolchain: [Samsung/tizen-agent-skills](https://github.com/Samsung/tizen-agent-skills) (SDK
   install, certificates, build, deploy, all driven by the agent).
-- Weather and sun: [Open-Meteo](https://open-meteo.com/) (free, no key).
+- Weather: [Open-Meteo](https://open-meteo.com/) (free, no key). Astronomy:
+  [SunCalc](https://github.com/mourner/suncalc) by Volodymyr Agafonkin (MIT, vendored), verified
+  against the [USNO](https://aa.usno.navy.mil/) and [NASA Dial-a-Moon](https://svs.gsfc.nasa.gov/).
 - Radio: [SomaFM](https://somafm.com/), [laut.fm](https://laut.fm/), [FluxFM](https://www.fluxfm.de/),
   [I Love Radio](https://www.ilovemusic.de/), [Zeno.FM](https://zeno.fm/). Thank them, support them.
 - Remote control: [samsungtvws](https://github.com/xchwarze/samsung-tv-ws-api).

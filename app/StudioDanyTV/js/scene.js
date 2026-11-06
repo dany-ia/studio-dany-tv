@@ -1,6 +1,6 @@
-/* scene.js — the frame loop. Owns the WebGL background (sky pass to texture every N frames,
-   main pass every frame) and calls the sprite layer each frame. Exposes the light state so the
-   2D layer can shade sprites consistently with the shader. */
+/* scene.js — the frame loop. Builds the scene state (real clock or forced date/hour, Open-Meteo
+   weather, real astronomy from astro.js), owns the WebGL background (sky pass to texture every
+   N frames, main pass every frame) and calls the sprite layer each frame. */
 (function (global) {
   "use strict";
   var cv, G, gl, skyProg, mainProg, skyRT = null;
@@ -8,44 +8,45 @@
   var W = 1280, H = 720, quality = 2, skyEvery = 4, frame = 0, started = false, last = 0, t0 = 0;
   var fps = { frames: 0, acc: 0, value: 0, worst: 0, maxFrame: 0 };
   var info = { gl: "none", renderer: "", bench: "" };
-  var PI = Math.PI;
 
-  function moonPhase(date) {   // 0 new, 0.5 full (synodic month from the new moon of 2000-01-06 18:14 UTC)
-    var ref = Date.UTC(2000, 0, 6, 18, 14), days = (date.getTime() - ref) / 86400000;
-    return ((days / 29.530588853) % 1 + 1) % 1;
+  /* the scene's Date: real clock, with dev overrides for year / month / day / hour */
+  function sceneDate() {
+    var D = global.DEV || {}, now = new Date();
+    if (D.hour == null && D.month == null && D.day == null && D.year == null) return now;
+    var h = D.hour != null ? D.hour : now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+    var hh = Math.floor(h), mm = Math.floor((h - hh) * 60), ss = Math.floor(((h - hh) * 60 - mm) * 60);
+    return new Date(D.year || now.getFullYear(), (D.month || now.getMonth() + 1) - 1, D.day || now.getDate(), hh, mm, ss);
   }
 
-  /* scene state: real clock + Open-Meteo (window.ENV), overridden by the dev overlay (window.DEV) */
+  /* scene state: clock + Open-Meteo (window.ENV) + astronomy, overridden by the dev overlay (window.DEV) */
   function state() {
-    var E = global.ENV || {}, D = global.DEV || {}, d = new Date();     // overrides apply even with the overlay hidden (app.js clears them)
+    var E = global.ENV || {}, D = global.DEV || {}, date = sceneDate(), A = global.Astro.at(date);
     var code = D.code != null ? D.code : (E.code != null ? E.code : 0);
     var wx = global.Weather ? global.Weather.params(code) : { cloud: 0.05, rain: 0, fog: 0, storm: false };
     return {
-      hour: D.hour != null ? D.hour : d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600,
-      sunrise: E.sunrise || 6.5, sunset: E.sunset || 18.1, cloud: wx.cloud, code: code, weather: wx,
+      date: date, hour: date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600,
+      astro: A, sunrise: A.sunriseH, sunset: A.sunsetH,
+      cloud: wx.cloud, code: code, weather: wx,
       wind: D.wind != null ? D.wind : (E.wind != null ? E.wind : 10),
-      month: D.month != null ? D.month : d.getMonth() + 1, day: D.day != null ? D.day : d.getDate(),
-      moon: moonPhase(d)
+      month: date.getMonth() + 1, day: date.getDate(), year: date.getFullYear()
     };
   }
 
-  /* same light model as the shader prelude, for the sprite layer */
+  /* light model for the sprite layer (same numbers the shaders get) */
   function light(S) {
-    var dayLen = S.sunset - S.sunrise, df = (S.hour - S.sunrise) / dayLen, nightLen = 24 - dayLen;
-    var nf = S.hour < S.sunrise ? (S.hour + 24 - S.sunset) / nightLen : (S.hour - S.sunset) / nightLen;
-    var isDay = df >= 0 && df <= 1, elev = isDay ? Math.sin(PI * df) : -Math.sin(PI * Math.max(0, Math.min(1, nf)));
-    var ss = function (a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-    var cdf = Math.max(0, Math.min(1, df));
-    return { elev: elev, d: ss(-0.10, 0.28, elev), tw: Math.exp(-Math.pow(elev / 0.16, 2)), isDay: isDay,
-             sunX: 0.12 + 0.50 * cdf, sunY: 0.46 + 0.52 * Math.sin(PI * cdf), night: ss(0.03, -0.10, elev), lightsOn: ss(0.08, -0.02, elev) };
+    var A = S.astro;
+    return { elev: A.elev, d: A.d, tw: A.tw, isDay: A.isDay, sunX: A.sun.x, sunY: A.sun.y, night: A.night * (1 - 0.6 * A.moonBright), lightsOn: A.lightsOn, moonBright: A.moonBright };
   }
 
   var flash = 0;
   function setUniforms(p, S, t) {
+    var A = S.astro;
     p.set2f("u_res", W, H); p.set1f("u_time", t);
-    p.set1f("u_hour", S.hour); p.set1f("u_sunrise", S.sunrise); p.set1f("u_sunset", S.sunset);
-    p.set1f("u_cloud", S.cloud); p.set1f("u_wind", S.wind); p.set1f("u_moon", S.moon); p.set1f("u_quality", quality);
+    p.set1f("u_cloud", S.cloud); p.set1f("u_wind", S.wind); p.set1f("u_quality", quality);
     p.set1f("u_rain", S.weather.rain); p.set1f("u_fog", S.weather.fog); p.set1f("u_flash", flash);
+    p.set1f("u_elev", A.elev); p.set1f("u_sunUp", A.sunUp); p.set2f("u_sunPos", A.sun.x, A.sun.y);
+    p.set1f("u_moonUp", A.moonUp); p.set2f("u_moonPos", A.moon.x, A.moon.y); p.set2f("u_moonDir", A.moonDir.x, A.moonDir.y);
+    p.set1f("u_moonFrac", A.moonFrac); p.set1f("u_moonBright", A.moonBright);
   }
 
   function resize(w, h) {
@@ -91,7 +92,7 @@
     setQuality: function (q) { quality = q; frame = 0; },
     setSkyEvery: function (n) { skyEvery = n; frame = 0; },
     state: state, light: light,
-    /* benchmark: each config 5 s, median fps; ends on 720p / q1 / sky every 4 */
+    /* benchmark: internal render size x quality tier x sky rate, 5 s each, median fps; ends on 720p / q2 / sky every 4 */
     bench: function (done) {
       var cfgs = [["720q1s4", 1280, 720, 1, 4], ["720q2s4", 1280, 720, 2, 4], ["720q2s1", 1280, 720, 2, 1], ["1080q1s4", 1920, 1080, 1, 4], ["1080q2s4", 1920, 1080, 2, 4], ["540q2s4", 960, 540, 2, 4]], i = 0, out = [];
       function step() {

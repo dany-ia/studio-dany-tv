@@ -20,7 +20,7 @@
 
   // ---------- clock ----------
   function tick() {
-    var d = new Date();
+    var d = Scene.state().date;                              // the scene's date: real, or forced through the dev overlay
     $("hm").textContent = p2(d.getHours()) + ":" + p2(d.getMinutes());
     $("ss").textContent = p2(d.getSeconds());
     $("date").textContent = DIAS[d.getDay()] + " " + d.getDate() + " DE " + MESES[d.getMonth()];
@@ -38,12 +38,12 @@
   var lastWx = null;
   function renderWx(j) {
     var c = j.current, d = j.daily, forced = window.DEV && window.DEV.code != null;
-    $("wx").innerHTML = (WX[forced ? window.DEV.code : c.weather_code] || "clima") + (forced ? " (dev)" : "") + " <b>" + Math.round(c.temperature_2m) + "°</b> · " +
+    $("wx").innerHTML = (WX[forced ? window.DEV.code : c.weather_code] || "clima") + (forced && !CFG.clean ? " (dev)" : "") + " <b>" + Math.round(c.temperature_2m) + "°</b> · " +
       Math.round(d.temperature_2m_min[0]) + "° / " + Math.round(d.temperature_2m_max[0]) + "° · " +
       Math.round(c.relative_humidity_2m) + "% hum · " + Math.round(c.wind_speed_10m) + " km/h";
     window.ENV.code = c.weather_code; window.ENV.wind = c.wind_speed_10m; window.ENV.isDay = c.is_day;
-    var sr = hourOf(d.sunrise[0]), ss = hourOf(d.sunset[0]);
-    if (sr > 0 && ss > sr) { window.ENV.sunrise = sr; window.ENV.sunset = ss; }
+    var sr = hourOf(d.sunrise[0]), ss = hourOf(d.sunset[0]);     // kept only as a cross-check against SunCalc (shown in the dev overlay)
+    if (sr > 0 && ss > sr) { window.ENV.sunrise = sr; window.ENV.sunset = ss; window.ENV.sunriseOM = d.sunrise[0].slice(11); window.ENV.sunsetOM = d.sunset[0].slice(11); }
     if (window.Scene) Scene.skyDirty = true;
   }
   function weather() {
@@ -81,7 +81,7 @@
   // ---------- dev overlay (0 key) ----------
   // fields: hour / weather code / month / day / wind (scene overrides) + quality / resolution / sky rate (live switches)
   var CODES = [0, 1, 2, 3, 45, 51, 61, 63, 65, 80, 82, 95];
-  var FIELDS = ["hora", "clima", "mes", "día", "viento", "calidad", "res", "cielo"];
+  var FIELDS = ["hora", "clima", "mes", "día", "año", "viento", "calidad", "res", "cielo"];
   var RES = [540, 720, 1080], SKY = [1, 2, 4];
   // review presets on the number keys: 1-4 hours, 6 Día de Muertos, 7 Navidad, 8 lluvia, 9 tormenta; 5 clears everything
   var PRESETS = { 49: { hour: 6.5 }, 50: { hour: 12.0 }, 51: { hour: 18.25 }, 52: { hour: 23.0 },
@@ -92,22 +92,26 @@
     if (D.field === 1) { var i = Math.max(0, CODES.indexOf(S.code)); D.code = CODES[(i + dir + CODES.length) % CODES.length]; }
     if (D.field === 2) D.month = ((S.month - 1 + dir + 12) % 12) + 1;
     if (D.field === 3) D.day = ((S.day - 1 + dir + 31) % 31) + 1;
-    if (D.field === 4) D.wind = Math.max(0, S.wind + dir * 5);
-    if (D.field === 5) { D.q = (D.q + dir + 3) % 3; Scene.setQuality(D.q); }
-    if (D.field === 6) { D.res = RES[(RES.indexOf(D.res) + dir + 3) % 3]; Scene.setRes(D.res * 16 / 9, D.res); }
-    if (D.field === 7) { D.sky = SKY[(SKY.indexOf(D.sky) + dir + 3) % 3]; Scene.setSkyEvery(D.sky); }
+    if (D.field === 4) D.year = S.year + dir;
+    if (D.field === 5) D.wind = Math.max(0, S.wind + dir * 5);
+    if (D.field === 6) { D.q = (D.q + dir + 3) % 3; Scene.setQuality(D.q); }
+    if (D.field === 7) { D.res = RES[(RES.indexOf(D.res) + dir + 3) % 3]; Scene.setRes(D.res * 16 / 9, D.res); }
+    if (D.field === 8) { D.sky = SKY[(SKY.indexOf(D.sky) + dir + 3) % 3]; Scene.setSkyEvery(D.sky); }
     Scene.skyDirty = true; refreshWx();
   }
   function refreshWx() { if (lastWx) renderWx(lastWx.data); }
   function devRender() {
     if (!window.DEV.on) { if (!$("devmark").classList.contains("hidden")) $("devmark").textContent = "DEV · " + Scene.fps.value + " fps"; return; }
-    var D = window.DEV, S = Scene.state(), f = Scene.fps, z = Scene.size(), I = Scene.info;
-    var vals = [S.hour.toFixed(1) + "h", S.code + " " + (WX[S.code] || ""), MESES[S.month - 1].slice(0, 3), S.day, Math.round(S.wind) + "km/h", "q" + z.q, z.h + "p", "1/" + z.s];
+    var D = window.DEV, S = Scene.state(), A = S.astro, f = Scene.fps, z = Scene.size(), I = Scene.info;
+    var vals = [S.hour.toFixed(1) + "h", S.code + " " + (WX[S.code] || ""), MESES[S.month - 1].slice(0, 3), S.day, S.year, Math.round(S.wind) + "km/h", "q" + z.q, z.h + "p", "1/" + z.s];
     var line = "";
     for (var i = 0; i < FIELDS.length; i++) line += (i === D.field ? "[" : " ") + FIELDS[i] + " " + vals[i] + (i === D.field ? "]" : " ") + " ";
+    var om = window.ENV.sunriseOM != null ? "  open-meteo " + window.ENV.sunriseOM + "/" + window.ENV.sunsetOM : "";
     $("dev").textContent = "FPS " + f.value + " (peor " + f.worst + " ms)  bg " + z.w + "x" + z.h + " q" + z.q + " cielo 1/" + z.s + "  " + I.gl + "  gpu " + I.renderer.slice(0, 22) + "\n" +
       "bench " + (I.bench || "…") + "   radio " + (Radio.testLog() || "(VERDE: probar estaciones)") + "\n" +
-      line + "\n◄► campo  ▲▼ valor  1-4 horas  6 muertos  7 navidad  8 lluvia  9 tormenta  5 real  ROJO reset  VERDE radio  0 cerrar   sol " + window.ENV.sunrise.toFixed(2) + "/" + window.ENV.sunset.toFixed(2);
+      "sol alt " + A.sunAlt.toFixed(1) + "° az " + A.sunAz.toFixed(0) + "°  sale " + A.hm(A.times.sunrise) + " pone " + A.hm(A.times.sunset) + om + "  dorada " + A.hm(A.times.goldenHour) + "  azul/noche " + A.hm(A.times.dusk) + "-" + A.hm(A.times.night) + "\n" +
+      "luna " + A.phaseName + " " + A.illumPct + "% (edad " + A.moonAge.toFixed(1) + " d)  alt " + A.moonAlt.toFixed(1) + "° az " + A.moonAz.toFixed(0) + "°  sale " + A.moonrise + " pone " + A.moonset + (A.moonUp > 0.01 ? "  · visible" : "  · bajo el horizonte") + "\n" +
+      line + "\n◄► campo  ▲▼ valor  1-4 horas  6 muertos  7 navidad  8 lluvia  9 tormenta  5 real  ROJO reset  VERDE radio  0 cerrar";
   }
 
   // ---------- keys ----------
@@ -116,8 +120,8 @@
     var names = ["MediaPlayPause", "MediaPlay", "MediaPause", "ColorF0Red", "ColorF1Green", "ColorF2Yellow", "ColorF3Blue", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
     for (var i = 0; i < names.length; i++) { try { tizen.tvinputdevice.registerKey(names[i]); } catch (e) {} }
   }
-  function clearOverrides() { var D = window.DEV; D.hour = D.code = D.month = D.day = D.wind = null; Scene.skyDirty = true; $("devmark").classList.add("hidden"); refreshWx(); }
-  function hasOverrides() { var D = window.DEV; return D.hour != null || D.code != null || D.month != null || D.day != null || D.wind != null; }
+  function clearOverrides() { var D = window.DEV; D.hour = D.code = D.month = D.day = D.year = D.wind = null; Scene.skyDirty = true; $("devmark").classList.add("hidden"); refreshWx(); }
+  function hasOverrides() { var D = window.DEV; return D.hour != null || D.code != null || D.month != null || D.day != null || D.year != null || D.wind != null; }
   var hideTimer = null;
   function onKey(e) {
     var k = e.keyCode, D = window.DEV;
@@ -149,9 +153,10 @@
     while ((m = re.exec(s))) q[m[1]] = decodeURIComponent(m[2]);
     var D = window.DEV;
     if (q.hour != null) D.hour = parseFloat(q.hour); if (q.code != null) D.code = parseInt(q.code, 10);
-    if (q.month != null) D.month = parseInt(q.month, 10); if (q.day != null) D.day = parseInt(q.day, 10); if (q.wind != null) D.wind = parseFloat(q.wind);
+    if (q.month != null) D.month = parseInt(q.month, 10); if (q.day != null) D.day = parseInt(q.day, 10); if (q.year != null) D.year = parseInt(q.year, 10); if (q.wind != null) D.wind = parseFloat(q.wind);
     if (q.dev != null) CFG.devOnStart = q.dev === "1";
     if (q.radio === "0") CFG.radio = false;
+    if (q.clean === "1") CFG.clean = true;        // no "(dev)" marker: for screenshots and the README GIF
   }
 
   // ---------- boot ----------
