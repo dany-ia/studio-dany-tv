@@ -5,13 +5,17 @@ sun, the real weather and the Mexican calendar, with a lofi radio that changes w
 It runs as a signed Tizen web app on a stock 98" Samsung panel at a steady 60 fps, built and
 deployed entirely from a Mac by an AI coding agent working through a phone camera pointed at the TV.
 
-![Night at the bar, rendered at 1920x1080](docs/images/render-night.jpg)
+![Golden hour at the bar, rendered at 1920x1080](docs/images/render-v2-17h.jpg)
 
 ![A full day in 48 frames](docs/images/day-cycle.gif)
 
-| Noon | Rain | Día de Muertos | Summer |
+| 09:00, the coffee bar | 22:00, bulbs on | Golden hour at the counter | Rain |
 |---|---|---|---|
-| ![](docs/images/render-noon.jpg) | ![](docs/images/render-rain.jpg) | ![](docs/images/render-muertos.jpg) | ![](docs/images/render-summer.jpg) |
+| ![](docs/images/render-v2-09h.jpg) | ![](docs/images/render-v2-22h.jpg) | ![](docs/images/render-v2-bar.jpg) | ![](docs/images/render-rain.jpg) |
+
+| Noon | Night | Día de Muertos | Summer |
+|---|---|---|---|
+| ![](docs/images/render-noon.jpg) | ![](docs/images/render-night.jpg) | ![](docs/images/render-muertos.jpg) | ![](docs/images/render-summer.jpg) |
 
 On the real panel, photographed through the watcher at sunset:
 
