@@ -139,7 +139,7 @@
     for (var i = 0; i < FIELDS.length; i++) line += (i === D.field ? "[" : " ") + FIELDS[i] + " " + vals[i] + (i === D.field ? "]" : " ") + " ";
     var om = window.ENV.sunriseOM != null ? "  open-meteo " + window.ENV.sunriseOM + "/" + window.ENV.sunsetOM : "";
     $("dev").textContent = "FPS " + f.value + " (peor " + f.worst + " ms)  bg " + z.w + "x" + z.h + " q" + z.q + " cielo 1/" + z.s + "  " + I.gl + "  gpu " + I.renderer.slice(0, 22) + "\n" +
-      "bench " + (I.bench || "…") + "   audio " + audioSrc + (Spotify.state().reason ? " (" + Spotify.state().reason + ")" : "") + "   slot " + slotLine(D, S) + "   radio " + (Radio.testLog() || "(VERDE: probar estaciones)") + "\n" +
+      "bench " + (I.bench || "…") + "   audio " + audioSrc + (Spotify.state().broker ? " @ " + Spotify.state().broker : "") + (Spotify.state().reason ? " (" + Spotify.state().reason + ")" : "") + "   slot " + slotLine(D, S) + "   radio " + (Radio.testLog() || "(VERDE: probar estaciones)") + "\n" +
       "sol alt " + A.sunAlt.toFixed(1) + "° az " + A.sunAz.toFixed(0) + "°  sale " + A.hm(A.times.sunrise) + " pone " + A.hm(A.times.sunset) + om + "  dorada " + A.hm(A.times.goldenHour) + "  azul/noche " + A.hm(A.times.dusk) + "-" + A.hm(A.times.night) + "\n" +
       "luna " + A.phaseName + " " + A.illumPct + "% (edad " + A.moonAge.toFixed(1) + " d)  alt " + A.moonAlt.toFixed(1) + "° az " + A.moonAz.toFixed(0) + "°  sale " + A.moonrise + " pone " + A.moonset + (A.moonUp > 0.01 ? "  · visible" : "  · bajo el horizonte") + "\n" +
       line + "\n◄► campo  ▲▼ valor  1-4 horas  6 muertos  7 navidad  8 lluvia  9 tormenta  5 real  ROJO reset  VERDE radio  AZUL simular Spotify caído  0 cerrar";

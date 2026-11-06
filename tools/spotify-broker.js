@@ -6,9 +6,10 @@
    short-lived access tokens to the TV app.
 
    Ports:  127.0.0.1:8888  /login, /callback          (loopback only: the OAuth dance in your browser)
-           0.0.0.0:8899    /token, /devices, /status   (LAN; only allow-listed client IPs + X-App-Key)
+           0.0.0.0:8899    /token, /devices, /status   (LAN only: private source addresses, X-App-Key)
 
-   Config  .local/spotify/config.json  { "client_id": "...", "app_key": "...", "allow_ips": ["192.168.0.9"] }
+   Config  .local/spotify/config.json  { "client_id": "...", "app_key": "..." }
+           (allow_ips is no longer used: the TV's IP can change, the app key is the credential)
    Tokens  .local/spotify/tokens.json  (refresh token; chmod 600; never committed)
 
    Usage:  node tools/spotify-broker.js            # start (keep it running: launchd/pm2 later)
@@ -26,7 +27,11 @@ fs.mkdirSync(DIR, { recursive: true });
 const cfg = fs.existsSync(CONFIG) ? JSON.parse(fs.readFileSync(CONFIG, "utf8")) : {};
 if (!cfg.client_id) { console.error("missing client_id in " + CONFIG + "  (create an app at https://developer.spotify.com/dashboard with redirect URI " + REDIRECT + ")"); process.exit(1); }
 if (!cfg.app_key) { cfg.app_key = crypto.randomBytes(16).toString("hex"); fs.writeFileSync(CONFIG, JSON.stringify(cfg, null, 2)); }
-const allow = new Set((cfg.allow_ips || []).concat(["127.0.0.1", "::1", "::ffff:127.0.0.1"]));
+// LAN only: the server binds every interface but answers private (RFC 1918 / loopback / link-local) sources only
+function isLan(ip) {
+  ip = (ip || "").replace(/^::ffff:/, "");
+  return ip === "::1" || /^127\./.test(ip) || /^10\./.test(ip) || /^192\.168\./.test(ip) || /^172\.(1[6-9]|2\d|3[01])\./.test(ip) || /^fe80:/i.test(ip) || /^f[cd]/i.test(ip);
+}
 
 let tokens = fs.existsSync(TOKENS) ? JSON.parse(fs.readFileSync(TOKENS, "utf8")) : null;   // {refresh_token, access_token, expires_at}
 function saveTokens() { fs.writeFileSync(TOKENS, JSON.stringify(tokens, null, 2), { mode: 0o600 }); }
@@ -93,15 +98,17 @@ http.createServer(async (req, res) => {
   const ip = req.socket.remoteAddress, u = new URL(req.url, "http://x");
   const send = (code, obj) => { res.writeHead(code, { "Content-Type": "application/json", "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" }); res.end(JSON.stringify(obj)); };
   if (req.method === "OPTIONS") { res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "X-App-Key", "Access-Control-Max-Age": "600" }); return res.end(); }
-  if (u.pathname === "/status") return send(200, { logged_in: !!tokens, client: ip });
-  if (!allow.has(ip) || req.headers["x-app-key"] !== cfg.app_key) return send(403, { error: "forbidden" });
+  if (!isLan(ip)) { res.writeHead(403); return res.end(); }
+  // /status needs no key: it is the discovery beacon (the TV probes it by mDNS name, cached IP, or a subnet scan)
+  if (u.pathname === "/status") return send(200, { broker: "studiodany", logged_in: !!tokens, client: ip, host: req.headers.host || "" });
+  if (req.headers["x-app-key"] !== cfg.app_key) return send(403, { error: "forbidden" });
   try {
     const t = await accessToken();
-    if (u.pathname === "/token") { console.log(new Date().toISOString().slice(11, 19) + " token -> " + ip); return send(200, { access_token: t, expires_in: Math.floor((tokens.expires_at - Date.now()) / 1000) }); }
+    if (u.pathname === "/token") { console.log(new Date().toISOString().slice(11, 19) + " token -> " + ip + " via " + (req.headers.host || "?")); return send(200, { access_token: t, expires_in: Math.floor((tokens.expires_at - Date.now()) / 1000) }); }
     if (u.pathname === "/devices") { const r = await api("GET", "/me/player/devices", t); return send(r.status, r.json); }
     return send(404, { error: "not found" });
   } catch (e) { return send(503, { error: e.message }); }
 }).listen(8899, "0.0.0.0");
 
-console.log("spotify broker: login at http://127.0.0.1:8888/login  ·  LAN token endpoint :8899 (allow: " + [...allow].join(", ") + ")  ·  logged_in=" + !!tokens);
+console.log("spotify broker: login at http://127.0.0.1:8888/login  ·  LAN token endpoint :8899 (private sources + X-App-Key)  ·  logged_in=" + !!tokens);
 if (process.argv.includes("--login")) { const url = loginUrl(); console.log(url); execFile("open", [url]); }

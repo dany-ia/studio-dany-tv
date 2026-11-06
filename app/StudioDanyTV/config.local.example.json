@@ -1,6 +1,7 @@
 {
-  "_comment": "Copy to config.local.json (git-ignored, packaged into the .wgt). brokerUrl = the Mac running tools/spotify-broker.js; appKey = app_key from .local/spotify/config.json; deviceId = Spotify Connect device id (broker /devices).",
-  "brokerUrl": "http://192.168.0.X:8899",
+  "_comment": "Copy to config.local.json (git-ignored, packaged into the .wgt). brokerUrl = the machine running tools/spotify-broker.js, preferably its mDNS name; brokerScan = the LAN prefix scanned on port 8899 when the name does not resolve and the cached IP is stale; appKey = app_key from .local/spotify/config.json; deviceId = Spotify Connect device id (broker /devices).",
+  "brokerUrl": "http://My-Mac.local:8899",
+  "brokerScan": "192.168.0.",
   "appKey": "paste-app_key-here",
   "deviceId": "paste-device-id-here",
   "deviceName": "Living Room"

@@ -257,21 +257,32 @@ The TV then talks to the Spotify Web API directly (Premium account required for 
 
 1. Create an app at https://developer.spotify.com/dashboard with redirect URI
    `http://127.0.0.1:8888/callback` and copy its Client ID (no secret is needed).
-2. `.local/spotify/config.json`: `{ "client_id": "...", "allow_ips": ["<tv-ip>"] }`. The broker adds a
-   random `app_key` on first run.
+2. `.local/spotify/config.json`: `{ "client_id": "..." }`. The broker adds a random `app_key` on
+   first run; that key is the TV's credential (no IP allow-list, the TV's address may change).
 3. `node tools/spotify-broker.js --login` opens the Spotify login in your browser; the refresh token
-   lands in `.local/spotify/tokens.json` (mode 600). Keep the broker running (launchd, pm2, or a
-   Mac Studio in the closet: copy `.local/spotify/` and run the same script there).
+   lands in `.local/spotify/tokens.json` (mode 600). Keep the broker running: on the machine that
+   stays on (a Mac Studio in the closet), `tools/broker-install.sh user@that-mac.local` copies the
+   script and `.local/spotify/` over ssh and installs it as a LaunchAgent
+   (`com.studiodany.spotify-broker`, RunAtLoad + KeepAlive, log in `~/Library/Logs`). Run only one
+   broker at a time: the PKCE refresh token rotates, two brokers invalidate each other.
 4. Pick the Connect device: `curl -H "X-App-Key: <app_key>" http://127.0.0.1:8899/devices`. A device
    only appears after it has been used from the Spotify app at least once.
 5. Copy `app/StudioDanyTV/config.local.example.json` to `config.local.json` with the broker URL,
-   the app key and the device id. It is git-ignored and packaged into the `.wgt`.
+   the LAN prefix to scan, the app key and the device id. It is git-ignored and packaged into the
+   `.wgt`. The broker's IP may change (ISP modems rarely offer DHCP reservations), so the app finds
+   it at startup: it tries `brokerUrl` as written, then the last URL that worked (cached in
+   localStorage), then a one-off scan of `brokerScan` hosts 2-254 on port 8899, 24 probes at a time,
+   each candidate verified by `GET /status` answering `{"broker":"studiodany"}`. On this Tizen 8 TV
+   the web engine does **not** resolve mDNS names (`*.local`), so in practice the scan finds the
+   broker (about 2 s for a low address) and the cache makes the next boots instant. The dev overlay
+   shows which path was used, e.g. `audio spotify @ 192.168.0.23 (scan)`.
 6. `app/StudioDanyTV/playlists.json` holds the three playlist URIs (`coffee`, `reggae`, `jazz`).
    Swap them for your own.
 
 Security: the broker binds the OAuth dance to loopback only, and the LAN token endpoint answers
-only to allow-listed IPs presenting the app key. Nothing is exposed to the internet. Tokens are never
-committed (`.local/` and `config.local.json` are ignored).
+only private (RFC 1918) source addresses presenting the app key; `/status` is public on the LAN but
+carries nothing beyond the broker's name and whether it is logged in. Nothing is exposed to the
+internet. Tokens are never committed (`.local/` and `config.local.json` are ignored).
 
 ## Repository layout
 

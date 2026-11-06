@@ -87,12 +87,26 @@ remote-channel `tools/tvremote.py launch` does not foreground an app that is alr
 in the background (REST shows `"running": true, "visible": false`).
 
 ## 5b2. Spotify (primary audio)
-The broker must be running on a LAN machine: `node tools/spotify-broker.js` (state in `.local/spotify/`:
-`config.json` with client_id + app_key + allow_ips, `tokens.json` with the refresh token, `device.json`).
-If the refresh token is gone: `node tools/spotify-broker.js --login` and approve in the browser.
-The TV build needs `app/StudioDanyTV/config.local.json` (broker URL, app key, device id) before `build`.
-To move the broker to another machine: copy `.local/spotify/`, run the script there, update `brokerUrl`
-in `config.local.json`, rebuild. Without the broker the app plays the stream radio instead.
+Since v0.3.2 the broker runs on the Mac Studio (`dany_va@Daniels-Mac-Studio.local`, ssh key from this
+Air in `~/.ssh/id_ed25519`) as the LaunchAgent `com.studiodany.spotify-broker`: script and state in
+`~/studiodany/` there (`tools/spotify-broker.js`, `.local/spotify/config.json` + `tokens.json`), log
+in `~/Library/Logs/studiodany-spotify-broker.log`. Useful commands on the Studio:
+`launchctl kickstart -k gui/$(id -u)/com.studiodany.spotify-broker` (restart),
+`launchctl bootout gui/$(id -u)/com.studiodany.spotify-broker` (stop), `curl localhost:8899/status`.
+To reinstall or update it from this repo: `tools/broker-install.sh dany_va@Daniels-Mac-Studio.local`
+(copies the script and `.local/spotify/`, writes the plist, bootstraps it, prints `/status`). Never run
+two brokers at once: the PKCE refresh token rotates on every refresh and the other copy dies with
+"refresh failed". If the refresh token is gone: `node tools/spotify-broker.js --login` on the machine
+that holds `.local/spotify/`, approve in the browser, then re-run the install script.
+The TV build needs `app/StudioDanyTV/config.local.json` (`brokerUrl`, `brokerScan`, app key, device id)
+before `build`. The copy of `.local/spotify/` on this Air is stale from the day of the move (the Studio
+rotates the refresh token); the authoritative state is `~/studiodany/.local/spotify/` on the Studio.
+To bring it back here: `scp dany_va@Daniels-Mac-Studio.local:studiodany/.local/spotify/tokens.json
+.local/spotify/` after stopping the Studio's agent. Headless renders from this Air use
+`broker=http://Daniels-Mac-Studio.local:8899&readonly=1`. The TV finds the broker by itself when the Studio's IP changes (config URL → cached
+URL → scan of `brokerScan` on port 8899); this Tizen does not resolve `.local` names, so the scan is
+what actually works, and the overlay line `audio spotify @ <ip> (scan|cache|config)` tells which path
+was used. Without a broker the app plays the stream radio instead.
 
 ## 5a. If the router rebooted (IPs changed)
 Seen 2026-11-06: a router reboot moved the Mac from .19 to .11 and the TV from .9 to .16. Symptoms:
@@ -103,13 +117,16 @@ the TV answers with its name) and fix, in this order:
    Quickest: give the Mac its old IP back (`sudo networksetup -setmanual Wi-Fi 192.168.0.19
    255.255.255.0 192.168.0.1`, undo with `-setdhcp Wi-Fi`). Durable: DHCP reservations (5a2).
 2. `.local/tv.env`: TV_IP / TV_SERIAL to the TV's current IP, then `remote-device-cli.js connect`.
-3. `.local/spotify/config.json`: add the TV's IP to `allow_ips`, restart the broker.
-4. `app/StudioDanyTV/config.local.json`: `brokerUrl` must be the Mac's IP, then rebuild + install.
+3. Broker: nothing to do since v0.3.2 (the TV authenticates by app key, not by IP, and finds the
+   broker's new address by itself; a stale cached IP costs one scan at the next boot).
+4. If the broker ever moves to a subnet other than `brokerScan` in `config.local.json`, update it and
+   rebuild + install.
 
 ## 5a2. DHCP reservations (do this once, so 5a stops happening)
-Three devices must keep their addresses: the TV (sdb, remote, broker allow-list), the Mac (Developer
-Mode Host PC IP, `brokerUrl`) and the Bose soundbar (Spotify Connect target; a moving IP is harmless
-for Spotify itself but keeps the LAN tidy). MACs and current IPs are in `.local/device-inventory.md`.
+Three devices would like fixed addresses: the TV (sdb, remote), the Mac (Developer Mode Host PC
+IP) and the Bose soundbar (Spotify Connect target; a moving IP is harmless for Spotify itself but
+keeps the LAN tidy). The broker machine no longer needs one (5b2). MACs and current IPs are in
+`.local/device-inventory.md`. The izzi modem offers no reservations: use the fallback below.
 1. Router admin page (`http://192.168.0.1`) → DHCP / LAN → "Reserved addresses" (name varies by
    vendor: *DHCP reservation*, *Static lease*, *Address reservation*). Add one entry per device,
    MAC → IP: TV `192.168.0.16`, Mac `192.168.0.19`, soundbar its current IP. Save, then reboot each

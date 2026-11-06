@@ -63,6 +63,14 @@ the dev overlay changes the scene only and never sends a playback command. The o
 `slot Lofi Coffee (simulado) · suena Lofi Reggae` while an hour is forced. REINSTALL 5a2: DHCP
 reservations for TV, Mac and soundbar, with the manual-IP fallback and the Host PC IP update.
 
+## v0.3.2 (2026-11-06): broker moved to the Mac Studio, TV finds it by itself
+Broker now a LaunchAgent on the Mac Studio (`tools/broker-install.sh`, plist template in tools/),
+authenticating by app key only (no IP allow-list). The TV discovers the broker at startup: config
+URL → cached URL → scan of `brokerScan` on port 8899. Finding on this Tizen 8: the web engine does
+not resolve mDNS `.local` names (tested with the Air's and the Studio's names, the broker always saw
+the request arrive by IP), so the scan is the working path; it took ~2 s and the cached IP makes the
+next boots instant. Verified on the TV: HUD showing the current track with the Air's broker stopped.
+
 ## Next action (phase 2)
 - Build `app/StudioDanyTV` from `reference/tv_ambient_v1.html`: pixel clock, Spanish date, Open-Meteo,
   lofi radio on OK, procedural city at 60 fps on the TV engine, scanlines/vignette. Autorun on power-on.
