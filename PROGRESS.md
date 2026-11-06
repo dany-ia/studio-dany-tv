@@ -35,6 +35,12 @@ Private details (IPs, DUID, tokens) live in `.local/` (git-ignored). Dates are a
   Review photos at 06:30/12:00/18:15/23:00 via dev presets (keys 1-4). Known glitch to check: radio
   label occasionally renders garbled in daytime photos (will-change layers?).
 
+- Step C (2026-11-05/06): weather engine, Mexico-calendar decorations (JSON), ambient animations,
+  radio by time of day (11 streams verified on the TV). After trimming the per-frame shader work:
+  60 fps clear night, 57 in a storm. Dev overlay hidden by default from step D.
+- Step D (2026-11-06): README, MIT license, CONTRIBUTING, day-cycle GIF from headless Chrome,
+  public repo github.com/dany-ia/studio-dany-tv.
+
 ## Phase 1 status: DONE
 Not yet tested: Home-button behaviour while our app is in the foreground (needs a remote press),
 autorun on power-on (phase 2), remote WebSocket control (needs an on-TV pairing prompt, phase 2).

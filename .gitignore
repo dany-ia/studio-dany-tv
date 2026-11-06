@@ -17,3 +17,9 @@ dist/
 .skills-src/
 node_modules/
 .DS_Store
+# Tizen build output and IDE state
+app/**/Debug/
+app/**/Release/
+app/**/.tizen-rds/
+app/**/*.code-workspace
+__pycache__/

@@ -63,6 +63,19 @@ node "$R/project-manager-cli.js" build --project "$PWD/app/StudioDanyTV" --build
 node "$R/project-manager-cli.js" install --package "$PWD/app/StudioDanyTV/Debug/StudioDanyTV.wgt" --run
 ```
 
+App ids: `E58Zxev8MZ.StudioDanyTV` (package `E58Zxev8MZ`); hello app `5Fl59spfJV.StudioDanyHello`.
+Check the TV sees it: `curl -s http://<tv-ip>:8001/api/v2/applications/E58Zxev8MZ.StudioDanyTV`.
+
+## 5b. Autorun on power-on (TV setting, one time)
+Settings → All Settings → General & Privacy → Start Screen Options → **Autorun Last App: On**
+(and Autorun Smart Hub Home: Off). The TV reopens whatever app was in front when it went to
+standby, so leave Studio Dany TV in the foreground. A full power cut (not standby) may show the
+Smart Hub first; the app is then one Home → Apps press away.
+
+## 5c. Remote control from the Mac (optional)
+`.local/venv/bin/python tools/tvremote.py pair` once (accept the prompt on the TV), then
+`tools/tvremote.py key KEY_HOME` etc. Needs `.local/tv.env` with `TV_IP` and `TV_MAC`.
+
 ## 6. Rollback / recovery
 - The app is a normal user app. **Back** on the remote exits it; **Home** always opens Smart Hub.
 - Uninstall: `~/tizen-sdk/tools/sdb -s <tv-ip>:26101 uninstall <pkg-id>` (pkg id is the `package`

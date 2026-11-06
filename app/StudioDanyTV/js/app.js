@@ -5,7 +5,7 @@
   var CFG = {
     lat: 20.63, lon: -87.07, tz: "America/Cancun",
     weatherEveryMs: 15 * 60 * 1000,
-    devOnStart: true,           // show the dev/fps overlay at launch (0 key toggles it)
+    devOnStart: false,          // dev/fps overlay hidden by default (0 key toggles it; ?dev=1 in a browser)
     benchOnStart: false         // run the resolution/quality benchmark 5 s after launch (measurement runs only)
   };
 

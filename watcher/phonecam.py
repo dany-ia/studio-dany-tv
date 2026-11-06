@@ -7,7 +7,7 @@ screen. LAN only, HTTPS with a locally generated CA, single-use pairing token,
 scoped session cookie, no public tunnel. Stdlib only.
 
 Usage:
-  python3 watcher/phonecam.py start [--port 8443] [--host-ip 192.168.0.19]
+  python3 watcher/phonecam.py start [--port 8443] [--host-ip <this computer's LAN IP>]
       Generates certs on first run, starts the server, prints/opens the pairing QR.
   python3 watcher/phonecam.py newpair
       Issues a fresh single-use pairing link while the server runs (writes to .local/watcher/pair.txt).
