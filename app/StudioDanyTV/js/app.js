@@ -126,11 +126,11 @@
       "bench " + (I.bench || "…") + "   audio " + audioSrc + (Spotify.state().reason ? " (" + Spotify.state().reason + ")" : "") + "   radio " + (Radio.testLog() || "(VERDE: probar estaciones)") + "\n" +
       "sol alt " + A.sunAlt.toFixed(1) + "° az " + A.sunAz.toFixed(0) + "°  sale " + A.hm(A.times.sunrise) + " pone " + A.hm(A.times.sunset) + om + "  dorada " + A.hm(A.times.goldenHour) + "  azul/noche " + A.hm(A.times.dusk) + "-" + A.hm(A.times.night) + "\n" +
       "luna " + A.phaseName + " " + A.illumPct + "% (edad " + A.moonAge.toFixed(1) + " d)  alt " + A.moonAlt.toFixed(1) + "° az " + A.moonAz.toFixed(0) + "°  sale " + A.moonrise + " pone " + A.moonset + (A.moonUp > 0.01 ? "  · visible" : "  · bajo el horizonte") + "\n" +
-      line + "\n◄► campo  ▲▼ valor  1-4 horas  6 muertos  7 navidad  8 lluvia  9 tormenta  5 real  ROJO reset  VERDE radio  0 cerrar";
+      line + "\n◄► campo  ▲▼ valor  1-4 horas  6 muertos  7 navidad  8 lluvia  9 tormenta  5 real  ROJO reset  VERDE radio  AZUL simular Spotify caído  0 cerrar";
   }
 
   // ---------- keys ----------
-  var KEY = { ENTER: 13, RETURN: 10009, PLAYPAUSE: 10252, PLAY: 415, PAUSE: 19, RED: 403, GREEN: 404, LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ZERO: 48, FIVE: 53 };
+  var KEY = { ENTER: 13, RETURN: 10009, PLAYPAUSE: 10252, PLAY: 415, PAUSE: 19, RED: 403, GREEN: 404, BLUE: 406, LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ZERO: 48, FIVE: 53 };
   function registerKeys() {
     var names = ["MediaPlayPause", "MediaPlay", "MediaPause", "ColorF0Red", "ColorF1Green", "ColorF2Yellow", "ColorF3Blue", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
     for (var i = 0; i < names.length; i++) { try { tizen.tvinputdevice.registerKey(names[i]); } catch (e) {} }
@@ -153,6 +153,7 @@
       if (k === KEY.DOWN) { devAdjust(-1); devRender(); return; }
       if (k === KEY.RED) { clearOverrides(); devRender(); return; }
       if (k === KEY.GREEN) { Radio.test(7); devRender(); return; }
+      if (k === KEY.BLUE) { D.spotifyDown = !D.spotifyDown; Spotify.simulateDown(D.spotifyDown); devRender(); return; }
       if (PRESETS[k] != null) { var pr = PRESETS[k]; D.hour = pr.hour != null ? pr.hour : null; D.month = pr.month != null ? pr.month : null; D.day = pr.day != null ? pr.day : null; D.code = pr.code != null ? pr.code : null; Scene.skyDirty = true; refreshWx(); devRender(); return; }
       if (k === KEY.FIVE) { clearOverrides(); devRender(); return; }
     }

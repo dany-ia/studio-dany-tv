@@ -51,7 +51,9 @@
     });
   }
 
+  var simulateDown = false;                                     // dev overlay (Blue key): pretend Spotify is unreachable
   function poll() {
+    if (simulateDown) return fail("simulación: Spotify caído");
     api("GET", "/me/player", null, function (err, st, j) {
       if (err) return fail(err.message);
       failures = 0;
@@ -92,6 +94,7 @@
     },
     next: function (dir) { if (!state.ok) return; api("POST", dir > 0 ? "/me/player/next?device_id=" + deviceId : "/me/player/previous?device_id=" + deviceId, null, function () { setTimeout(poll, 600); }); },
     state: function () { return state; },
+    simulateDown: function (on) { simulateDown = on; failures = on ? 1 : 0; poll(); },
     slotFor: slotFor
   };
 })(window);

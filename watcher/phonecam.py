@@ -199,7 +199,7 @@ function stopCam(revoke){
   if(revoke)fetch('/stop',{method:'POST'}).then(()=>{log('sesión cerrada');document.body.innerHTML='<h1>Sesión cerrada. Puedes cerrar esta pestaña.</h1>'});
 }
 async function tick(){
-  if(stopped||inflight||document.hidden||!v.videoWidth)return;
+  if(stopped||inflight||!v.videoWidth)return;   // keeps sending from a background tab (laptop use); phones may throttle
   inflight=true;
   try{
     c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);
@@ -217,7 +217,7 @@ document.getElementById('stop').onclick=()=>stopCam(false);
 document.getElementById('end').onclick=()=>stopCam(true);
 document.getElementById('q').onclick=e=>{sharp=!sharp;e.target.textContent='Nitidez: '+(sharp?'alta':'normal');if(stream){stopCam(false);start()}};
 document.getElementById('flip').onclick=()=>{facing=facing==='environment'?'user':'environment';if(stream){stopCam(false);start()}};
-document.addEventListener('visibilitychange',()=>{if(document.hidden){setState('en segundo plano','warn');log('página oculta: pausado')}else if(stream){setState('activa','on');if(!wakeLock||wakeLock.released)navigator.wakeLock?.request('screen').then(w=>wakeLock=w).catch(()=>{})}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){setState('en segundo plano · enviando','warn')}else if(stream){setState('activa','on');if(!wakeLock||wakeLock.released)navigator.wakeLock?.request('screen').then(w=>wakeLock=w).catch(()=>{})}});
 if(!navigator.mediaDevices?.getUserMedia){setState('sin getUserMedia','warn');log('isSecureContext='+window.isSecureContext)}
 </script></body></html>"""
 
