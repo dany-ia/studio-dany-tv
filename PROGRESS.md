@@ -42,8 +42,15 @@ Private details (IPs, DUID, tokens) live in `.local/` (git-ignored). Dates are a
   public repo github.com/dany-ia/studio-dany-tv.
 
 ## Phase 1 status: DONE
-Not yet tested: Home-button behaviour while our app is in the foreground (needs a remote press),
-autorun on power-on (phase 2), remote WebSocket control (needs an on-TV pairing prompt, phase 2).
+Home while the app is in front opens the Smart Hub; Back exits the app; the WebSocket remote from
+the Mac (`tools/tvremote.py`) is paired and used for all menu navigation.
+
+## Autorun on power-on: DONE (2026-11-06)
+Found via remote + camera: Características avanzadas → Opción de Pantalla Inicio → Ejecución de la
+última aplicación: On (not under General y privacidad on this firmware). Standby/wake test from the
+Mac: the beach came back by itself, Spotify kept playing, Home still opens the Smart Hub. Photos in
+`.local/evidence/nav-*.jpg`. Caveat: tested with a short standby; a cold boot after a power cut may
+show the Smart Hub first.
 
 ## Next action (phase 2)
 - Build `app/StudioDanyTV` from `reference/tv_ambient_v1.html`: pixel clock, Spanish date, Open-Meteo,

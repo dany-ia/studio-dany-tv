@@ -67,10 +67,24 @@ App ids: `E58Zxev8MZ.StudioDanyTV` (package `E58Zxev8MZ`); hello app `5Fl59spfJV
 Check the TV sees it: `curl -s http://<tv-ip>:8001/api/v2/applications/E58Zxev8MZ.StudioDanyTV`.
 
 ## 5b. Autorun on power-on (TV setting, one time)
-Settings → All Settings → General & Privacy → Start Screen Options → **Autorun Last App: On**
-(and Autorun Smart Hub Home: Off). The TV reopens whatever app was in front when it went to
-standby, so leave Studio Dany TV in the foreground. A full power cut (not standby) may show the
-Smart Hub first; the app is then one Home → Apps press away.
+On this firmware (UN98DU9000, Tizen 8, es_MX) the option is NOT under General & Privacy:
+Menu key → **Características avanzadas** (Advanced Features) → **Opción de Pantalla Inicio**
+(Start Screen Options) → **Ejecución de la última aplicación** (Autorun Last App): **On**.
+"Iniciar con Inicio de Smart Hub" (Autorun Smart Hub Home) can stay On; it does not block it.
+The General & Privacy list on this firmware ends at "Restablecer datos de fábrica" (factory reset):
+there is nothing to enable there, so do not press OK at the bottom of that list.
+
+Verified 2026-11-06 from the Mac with the network remote + camera: app in front → KEY_POWER
+(standby, REST PowerState "standby") → WOL + KEY_POWER → the beach was back on its own with
+Spotify still playing (`.local/evidence/nav-13..22-*.jpg`). Home still opens the Smart Hub.
+Leave Studio Dany TV in the foreground when you turn the TV off. After a full power cut the
+Smart Hub may come first; the app is then one Home → Apps press away.
+
+After a standby/wake cycle the sdb link is gone: run the `remote-device-cli.js connect` line of
+step 4 again before any install. To put the app back in front from the Mac, use the install
+`--run` command of step 5; the
+remote-channel `tools/tvremote.py launch` does not foreground an app that is already running
+in the background (REST shows `"running": true, "visible": false`).
 
 ## 5b2. Spotify (primary audio)
 The broker must be running on a LAN machine: `node tools/spotify-broker.js` (state in `.local/spotify/`:

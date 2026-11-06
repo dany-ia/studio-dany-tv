@@ -208,9 +208,11 @@ Tested on a UN98DU9000 (Tizen 8/9). Any 2017+ Samsung TV with Developer Mode sho
    node <runners>/project-manager-cli.js build --project "$PWD/app/StudioDanyTV" --build-type Debug --sign-profile <profile>
    node <runners>/project-manager-cli.js install --package "$PWD/app/StudioDanyTV/Debug/StudioDanyTV.wgt" --run
    ```
-5. **Autorun on power-on**: Settings → All Settings → General & Privacy → Start Screen Options →
-   **Autorun Last App** on. Leave the app in the foreground when you turn the TV off. Home and
-   Smart Hub keep working; Back exits the app.
+5. **Autorun on power-on**: Settings → Advanced Features → Start Screen Options →
+   **Autorun Last App** on (on 2024 Tizen 8 sets it lives under *Advanced Features*, not
+   *General & Privacy*; Autorun Smart Hub Home can stay on). Leave the app in the foreground when
+   you turn the TV off. Verified on the 98" DU9000: standby → wake brings the beach back with the
+   music still playing. Home and Smart Hub keep working; Back exits the app.
 6. **Location**: change `lat`, `lon`, `tz` in `js/app.js` and the place name in `index.html`.
 
 Step-by-step details, rollback and the 5-minute redeploy after a firmware update are in
