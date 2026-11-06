@@ -1,7 +1,8 @@
 /* spotify.js — Spotify Connect as the primary audio source.
    - Access tokens come from the LAN token broker (tools/spotify-broker.js) using config.local.json
      ({ brokerUrl, appKey, deviceId, deviceName }); the TV never sees the refresh token.
-   - Slots: coffee 06-12, reggae 12-19, jazz 19-06 (playlists.json holds the three URIs). At a slot
+   - Slots: coffee 06-12, reggae 12-19, jazz 19-06 (playlists.json holds the three URIs), chosen from the
+     hour function given to init(): the real clock (app.js), never the scene's forced hour. At a slot
      boundary (and at launch when nothing is playing) the slot playlist starts on the chosen Connect
      device with shuffle on and repeat off, volume untouched.
    - Playback state is polled every few seconds for the HUD (track, artist, album art).

@@ -101,11 +101,29 @@ Find the TV again by scanning port 8001 (`curl http://192.168.0.N:8001/api/v2/` 
 the TV answers with its name) and fix, in this order:
 1. The TV's Developer Mode **Host PC IP** must equal the Mac's current IP, or sdb is refused.
    Quickest: give the Mac its old IP back (`sudo networksetup -setmanual Wi-Fi 192.168.0.19
-   255.255.255.0 192.168.0.1`, undo with `-setdhcp Wi-Fi`). Durable: DHCP reservations in the
-   router for the Mac and the TV.
+   255.255.255.0 192.168.0.1`, undo with `-setdhcp Wi-Fi`). Durable: DHCP reservations (5a2).
 2. `.local/tv.env`: TV_IP / TV_SERIAL to the TV's current IP, then `remote-device-cli.js connect`.
 3. `.local/spotify/config.json`: add the TV's IP to `allow_ips`, restart the broker.
 4. `app/StudioDanyTV/config.local.json`: `brokerUrl` must be the Mac's IP, then rebuild + install.
+
+## 5a2. DHCP reservations (do this once, so 5a stops happening)
+Three devices must keep their addresses: the TV (sdb, remote, broker allow-list), the Mac (Developer
+Mode Host PC IP, `brokerUrl`) and the Bose soundbar (Spotify Connect target; a moving IP is harmless
+for Spotify itself but keeps the LAN tidy). MACs and current IPs are in `.local/device-inventory.md`.
+1. Router admin page (`http://192.168.0.1`) → DHCP / LAN → "Reserved addresses" (name varies by
+   vendor: *DHCP reservation*, *Static lease*, *Address reservation*). Add one entry per device,
+   MAC → IP: TV `192.168.0.16`, Mac `192.168.0.19`, soundbar its current IP. Save, then reboot each
+   device (or renew its lease) and check with `arp -a`.
+2. The Mac: macOS rotates a *private Wi-Fi address* per network by default, which defeats a
+   reservation. System Settings → Wi-Fi → (i) on this network → **Private Wi-Fi address: Off** (or
+   *Fixed*), then reserve the MAC that `ifconfig en0 | grep ether` shows afterwards.
+3. Once the Mac is reserved, go back to DHCP: `sudo networksetup -setdhcp Wi-Fi`.
+Fallback when the router cannot reserve (ISP box, no admin access): keep manual IPs on both
+ends. Mac: `sudo networksetup -setmanual Wi-Fi 192.168.0.19 255.255.255.0 192.168.0.1` (DNS:
+`sudo networksetup -setdnsservers Wi-Fi 192.168.0.1`). TV: Menú → Conexión → Red → Estado de red →
+Config. IP → IP manual, same gateway and mask. Either way, if the Mac's IP ever changes, update
+the TV's Developer Mode Host PC IP (Apps → type 12345 → Host PC IP) and `brokerUrl` in
+`config.local.json`, then rebuild (5a, steps 1 and 4).
 
 ## 5c. Remote control from the Mac (optional)
 `.local/venv/bin/python tools/tvremote.py pair` once (accept the prompt on the TV), then

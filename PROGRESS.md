@@ -57,6 +57,12 @@ Mac: the beach came back by itself, Spotify kept playing, Home still opens the S
 `.local/evidence/nav-*.jpg`. Caveat: tested with a short standby; a cold boot after a power cut may
 show the Smart Hub first.
 
+## v0.3.1 (2026-11-06): overlay decoupled from playback, DHCP notes
+Radio and Spotify now take the real wall clock (`realHour` in app.js); forcing hour/date/weather in
+the dev overlay changes the scene only and never sends a playback command. The overlay shows
+`slot Lofi Coffee (simulado) · suena Lofi Reggae` while an hour is forced. REINSTALL 5a2: DHCP
+reservations for TV, Mac and soundbar, with the manual-IP fallback and the Host PC IP update.
+
 ## Next action (phase 2)
 - Build `app/StudioDanyTV` from `reference/tv_ambient_v1.html`: pixel clock, Spanish date, Open-Meteo,
   lofi radio on OK, procedural city at 60 fps on the TV engine, scanlines/vignette. Autorun on power-on.

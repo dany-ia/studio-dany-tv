@@ -29,7 +29,9 @@ Open `app/StudioDanyTV/index.html` in Chrome with `--allow-file-access-from-file
 parameters: `?hour=23&code=95&month=12&day=31&wind=25&dev=1&radio=0`. Add `warm=150` to
 pre-simulate the patrons so they are already seated, and on the machine that runs the Spotify
 broker `broker=http://127.0.0.1:8899&readonly=1` to show the real now-playing block without
-sending any playback command. Headless renders:
+sending any playback command (`readonly` only matters at launch: the slot playlist otherwise starts when
+nothing is playing. Forcing `hour=` never touches playback: the scheduler reads the real clock, and the
+dev overlay shows the forced slot as "(simulado)"). Headless renders:
 ```
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --allow-file-access-from-files \
   --use-angle=swiftshader --enable-unsafe-swiftshader --window-size=1920,1080 --hide-scrollbars \

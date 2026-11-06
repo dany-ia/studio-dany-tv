@@ -93,10 +93,13 @@
     $("radioSub").textContent = s.track ? s.artist : (s.device || "\u00a0");
     var img = $("art"); if (s.art) { if (img.src !== s.art) img.src = s.art; img.classList.remove("hidden"); } else img.classList.add("hidden");
   }
+  // Playback follows the real wall clock only. The dev overlay's forced hour/date/weather changes the
+  // scene, never the playlist slot, and never sends a playback command: the overlay shows the slot it
+  // would pick as "(simulado)". Spotify.slotFor(hour) is the single source of truth for the slot name.
+  function realHour() { var n = new Date(); return n.getHours() + n.getMinutes() / 60 + n.getSeconds() / 3600; }
   function radioInit() {
-    var hour = function () { return Scene.state().hour; };
-    Radio.init($("radioA"), $("radioB"), hour, radioUI, false);      // loaded but silent until Spotify is unavailable
-    Spotify.init(hour, spotifyUI);
+    Radio.init($("radioA"), $("radioB"), realHour, radioUI, false);  // loaded but silent until Spotify is unavailable
+    Spotify.init(realHour, spotifyUI);
   }
   function toggleRadio() { if (audioSrc === "spotify") Spotify.toggle(); else Radio.toggle(); }
   function nextTrack(dir) { if (audioSrc === "spotify") Spotify.next(dir); else Radio.next(dir); }
@@ -123,6 +126,11 @@
     Scene.skyDirty = true; refreshWx();
   }
   function refreshWx() { if (lastWx) renderWx(lastWx.data); }
+  // the slot line of the overlay: the real slot (what is playing), plus the one the forced hour would pick, marked simulado
+  function slotLine(D, S) {
+    var real = Spotify.slotFor(realHour()).name;
+    return D.hour == null ? real : Spotify.slotFor(S.hour).name + " (simulado) · suena " + real;
+  }
   function devRender() {
     if (!window.DEV.on) { if (!$("devmark").classList.contains("hidden")) $("devmark").textContent = "DEV · " + Scene.fps.value + " fps"; return; }
     var D = window.DEV, S = Scene.state(), A = S.astro, f = Scene.fps, z = Scene.size(), I = Scene.info;
@@ -131,7 +139,7 @@
     for (var i = 0; i < FIELDS.length; i++) line += (i === D.field ? "[" : " ") + FIELDS[i] + " " + vals[i] + (i === D.field ? "]" : " ") + " ";
     var om = window.ENV.sunriseOM != null ? "  open-meteo " + window.ENV.sunriseOM + "/" + window.ENV.sunsetOM : "";
     $("dev").textContent = "FPS " + f.value + " (peor " + f.worst + " ms)  bg " + z.w + "x" + z.h + " q" + z.q + " cielo 1/" + z.s + "  " + I.gl + "  gpu " + I.renderer.slice(0, 22) + "\n" +
-      "bench " + (I.bench || "…") + "   audio " + audioSrc + (Spotify.state().reason ? " (" + Spotify.state().reason + ")" : "") + "   radio " + (Radio.testLog() || "(VERDE: probar estaciones)") + "\n" +
+      "bench " + (I.bench || "…") + "   audio " + audioSrc + (Spotify.state().reason ? " (" + Spotify.state().reason + ")" : "") + "   slot " + slotLine(D, S) + "   radio " + (Radio.testLog() || "(VERDE: probar estaciones)") + "\n" +
       "sol alt " + A.sunAlt.toFixed(1) + "° az " + A.sunAz.toFixed(0) + "°  sale " + A.hm(A.times.sunrise) + " pone " + A.hm(A.times.sunset) + om + "  dorada " + A.hm(A.times.goldenHour) + "  azul/noche " + A.hm(A.times.dusk) + "-" + A.hm(A.times.night) + "\n" +
       "luna " + A.phaseName + " " + A.illumPct + "% (edad " + A.moonAge.toFixed(1) + " d)  alt " + A.moonAlt.toFixed(1) + "° az " + A.moonAz.toFixed(0) + "°  sale " + A.moonrise + " pone " + A.moonset + (A.moonUp > 0.01 ? "  · visible" : "  · bajo el horizonte") + "\n" +
       line + "\n◄► campo  ▲▼ valor  1-4 horas  6 muertos  7 navidad  8 lluvia  9 tormenta  5 real  ROJO reset  VERDE radio  AZUL simular Spotify caído  0 cerrar";
