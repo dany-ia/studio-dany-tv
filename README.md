@@ -37,9 +37,12 @@ On the real panel, photographed through the watcher at sunset:
   fireflies at night, and the bartender wipes glasses, shakes cocktails and pours.
 - **HUD.** Big pixel clock with seconds, Spanish date, weather line (current, min/max, humidity,
   wind), radio slot and station.
-- **Lofi radio by time of day.** Lofi Coffee in the morning, Lofi Reggae in the afternoon, Jazz
-  Lofi at night, with a 2 s crossfade at the boundaries. OK toggles play/pause, left/right skips
-  stations. Stations live in `radio.json`.
+- **Spotify Connect by time of day.** Lofi Coffee in the morning, Lofi Reggae in the afternoon,
+  Jazz Lofi at night: at each boundary (06/12/19) the slot's playlist starts on the chosen Connect
+  speaker with shuffle on and repeat off. The HUD shows track, artist, slot and a pixelated album
+  cover. OK toggles play/pause, left/right skips tracks. Playlists live in `playlists.json`. If
+  Spotify is unreachable the app falls back to internet lofi streams (`radio.json`) and returns to
+  Spotify when it is back.
 - **Dev overlay** on the `0` key to force any hour, weather code, month, day or wind, switch
   render quality, and run the benchmark or the radio test. Keys `1-4` jump to review hours,
   `6-9` to Día de Muertos, Christmas, rain and storm.
@@ -213,6 +216,31 @@ Tested on a UN98DU9000 (Tizen 8/9). Any 2017+ Samsung TV with Developer Mode sho
 Step-by-step details, rollback and the 5-minute redeploy after a firmware update are in
 [REINSTALL.md](REINSTALL.md). The phone-camera watcher used to see the TV from the agent is
 documented in [docs/WATCHER.md](docs/WATCHER.md).
+
+## Spotify setup
+
+The TV cannot do OAuth comfortably, so a tiny token broker (`tools/spotify-broker.js`, Node, no
+dependencies) runs on a computer on the same LAN. It does the Authorization Code + PKCE login once,
+keeps the refresh token in an untracked file, and hands short-lived access tokens to the TV app.
+The TV then talks to the Spotify Web API directly (Premium account required for playback control).
+
+1. Create an app at https://developer.spotify.com/dashboard with redirect URI
+   `http://127.0.0.1:8888/callback` and copy its Client ID (no secret is needed).
+2. `.local/spotify/config.json`: `{ "client_id": "...", "allow_ips": ["<tv-ip>"] }`. The broker adds a
+   random `app_key` on first run.
+3. `node tools/spotify-broker.js --login` opens the Spotify login in your browser; the refresh token
+   lands in `.local/spotify/tokens.json` (mode 600). Keep the broker running (launchd, pm2, or a
+   Mac Studio in the closet: copy `.local/spotify/` and run the same script there).
+4. Pick the Connect device: `curl -H "X-App-Key: <app_key>" http://127.0.0.1:8899/devices`. A device
+   only appears after it has been used from the Spotify app at least once.
+5. Copy `app/StudioDanyTV/config.local.example.json` to `config.local.json` with the broker URL,
+   the app key and the device id. It is git-ignored and packaged into the `.wgt`.
+6. `app/StudioDanyTV/playlists.json` holds the three playlist URIs (`coffee`, `reggae`, `jazz`).
+   Swap them for your own.
+
+Security: the broker binds the OAuth dance to loopback only, and the LAN token endpoint answers
+only to allow-listed IPs presenting the app key. Nothing is exposed to the internet. Tokens are never
+committed (`.local/` and `config.local.json` are ignored).
 
 ## Repository layout
 

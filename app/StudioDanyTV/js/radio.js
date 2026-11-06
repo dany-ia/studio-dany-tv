@@ -45,12 +45,14 @@
   }
 
   global.Radio = {
-    init: function (audioA, audioB, hour, change) {
+    init: function (audioA, audioB, hour, change, autoplay) {
       els = [audioA, audioB]; hourFn = hour || hourFn; onChange = change;
       var x = new XMLHttpRequest(); x.open("GET", "radio.json", true);
       x.onload = function () {
         try { cfg = JSON.parse(x.responseText); } catch (e) { status = "radio.json inválido"; emit(); return; }
-        slot = slotFor(hourFn()); idx = 0; start(station(), 300); setInterval(tick, 5000);
+        slot = slotFor(hourFn()); idx = 0; status = "en espera"; emit();
+        if (autoplay !== false) start(station(), 300);
+        setInterval(tick, 5000);
       };
       x.onerror = function () { status = "radio.json no encontrado"; emit(); };
       x.send();
@@ -61,6 +63,9 @@
       else { playing = true; if (a.src) { a.volume = 1; a.play(); status = "sonando"; emit(); } else start(station(), 300); tick(); }
     },
     next: function (dir) { if (cfg.slots.length) { playing = true; skip(dir); } },
+    /* used by the Spotify fallback: start / stop the stream without touching the user's play state */
+    play: function () { if (!playing && cfg.slots.length) { playing = true; slot = slotFor(hourFn()); idx = 0; start(station(), 600); } },
+    stop: function () { if (playing) { playing = false; clearInterval(fadeTimer); silence(els[0]); silence(els[1]); status = "en espera"; emit(); } },
     label: label,
     isPlaying: function () { return playing && status === "sonando"; },
     testLog: function () { return testLog; },

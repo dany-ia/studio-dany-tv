@@ -67,16 +67,31 @@
   }
   try { var cached = JSON.parse(localStorage.getItem("wx")); if (cached && cached.data) { lastWx = cached; renderWx(cached.data); } } catch (e) {}
 
-  // ---------- radio (js/radio.js + radio.json) ----------
+  // ---------- audio: Spotify Connect first (js/spotify.js), stream radio as fallback (js/radio.js) ----------
+  var audioSrc = "none";          // "spotify" | "radio"
   function radioUI(l) {
+    if (audioSrc !== "radio") return;
     $("bars").className = "bars " + (l.status === "sonando" ? "" : "off");
-    $("radioSlot").textContent = l.slot.toLowerCase();
+    $("radioSlot").textContent = l.slot.toLowerCase() + " · radio";
     $("radioLabel").textContent = (l.station ? l.station + " · " : "") + l.status;
+    $("art").classList.add("hidden");
+  }
+  function spotifyUI(s) {
+    if (s.ok && audioSrc !== "spotify") { audioSrc = "spotify"; Radio.stop(); }
+    if (!s.ok && audioSrc !== "radio") { audioSrc = "radio"; Radio.play(); return; }
+    if (audioSrc !== "spotify") return;
+    $("bars").className = "bars " + (s.playing ? "" : "off");
+    $("radioSlot").textContent = (s.slot || "spotify").toLowerCase();
+    $("radioLabel").textContent = s.track ? s.track + " · " + s.artist : (s.playing ? "spotify" : "pausa · OK para reproducir");
+    var img = $("art"); if (s.art) { if (img.src !== s.art) img.src = s.art; img.classList.remove("hidden"); } else img.classList.add("hidden");
   }
   function radioInit() {
-    Radio.init($("radioA"), $("radioB"), function () { return Scene.state().hour; }, radioUI);   // forced hours switch the slot too
+    var hour = function () { return Scene.state().hour; };
+    Radio.init($("radioA"), $("radioB"), hour, radioUI, false);      // loaded but silent until Spotify is unavailable
+    Spotify.init(hour, spotifyUI);
   }
-  function toggleRadio() { Radio.toggle(); }
+  function toggleRadio() { if (audioSrc === "spotify") Spotify.toggle(); else Radio.toggle(); }
+  function nextTrack(dir) { if (audioSrc === "spotify") Spotify.next(dir); else Radio.next(dir); }
 
   // ---------- dev overlay (0 key) ----------
   // fields: hour / weather code / month / day / wind (scene overrides) + quality / resolution / sky rate (live switches)
@@ -108,7 +123,7 @@
     for (var i = 0; i < FIELDS.length; i++) line += (i === D.field ? "[" : " ") + FIELDS[i] + " " + vals[i] + (i === D.field ? "]" : " ") + " ";
     var om = window.ENV.sunriseOM != null ? "  open-meteo " + window.ENV.sunriseOM + "/" + window.ENV.sunsetOM : "";
     $("dev").textContent = "FPS " + f.value + " (peor " + f.worst + " ms)  bg " + z.w + "x" + z.h + " q" + z.q + " cielo 1/" + z.s + "  " + I.gl + "  gpu " + I.renderer.slice(0, 22) + "\n" +
-      "bench " + (I.bench || "…") + "   radio " + (Radio.testLog() || "(VERDE: probar estaciones)") + "\n" +
+      "bench " + (I.bench || "…") + "   audio " + audioSrc + (Spotify.state().reason ? " (" + Spotify.state().reason + ")" : "") + "   radio " + (Radio.testLog() || "(VERDE: probar estaciones)") + "\n" +
       "sol alt " + A.sunAlt.toFixed(1) + "° az " + A.sunAz.toFixed(0) + "°  sale " + A.hm(A.times.sunrise) + " pone " + A.hm(A.times.sunset) + om + "  dorada " + A.hm(A.times.goldenHour) + "  azul/noche " + A.hm(A.times.dusk) + "-" + A.hm(A.times.night) + "\n" +
       "luna " + A.phaseName + " " + A.illumPct + "% (edad " + A.moonAge.toFixed(1) + " d)  alt " + A.moonAlt.toFixed(1) + "° az " + A.moonAz.toFixed(0) + "°  sale " + A.moonrise + " pone " + A.moonset + (A.moonUp > 0.01 ? "  · visible" : "  · bajo el horizonte") + "\n" +
       line + "\n◄► campo  ▲▼ valor  1-4 horas  6 muertos  7 navidad  8 lluvia  9 tormenta  5 real  ROJO reset  VERDE radio  0 cerrar";
@@ -142,8 +157,8 @@
       if (k === KEY.FIVE) { clearOverrides(); devRender(); return; }
     }
     if (k === KEY.ENTER || k === KEY.PLAYPAUSE || k === KEY.PLAY || k === KEY.PAUSE) { toggleRadio(); e.preventDefault(); }
-    else if (k === KEY.LEFT) Radio.next(-1);
-    else if (k === KEY.RIGHT) Radio.next(1);
+    else if (k === KEY.LEFT) nextTrack(-1);
+    else if (k === KEY.RIGHT) nextTrack(1);
     else if (k === KEY.RETURN) { try { tizen.application.getCurrentApplication().exit(); } catch (err) {} }
   }
 

@@ -23,3 +23,6 @@ app/**/Release/
 app/**/.tizen-rds/
 app/**/*.code-workspace
 __pycache__/
+
+# Spotify: TV-side config with the broker app key (packaged into the .wgt, never committed)
+app/**/config.local.json

@@ -43,6 +43,9 @@ files:
   - js/radio.js
   - js/scene.js
   - radio.json
+  - playlists.json
+  - config.local.json
+  - js/spotify.js
   - decorations.json
   - fonts/PressStart2P-Regular.ttf
   - fonts/VT323-Regular.ttf

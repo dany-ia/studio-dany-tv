@@ -72,6 +72,14 @@ Settings → All Settings → General & Privacy → Start Screen Options → **A
 standby, so leave Studio Dany TV in the foreground. A full power cut (not standby) may show the
 Smart Hub first; the app is then one Home → Apps press away.
 
+## 5b2. Spotify (primary audio)
+The broker must be running on a LAN machine: `node tools/spotify-broker.js` (state in `.local/spotify/`:
+`config.json` with client_id + app_key + allow_ips, `tokens.json` with the refresh token, `device.json`).
+If the refresh token is gone: `node tools/spotify-broker.js --login` and approve in the browser.
+The TV build needs `app/StudioDanyTV/config.local.json` (broker URL, app key, device id) before `build`.
+To move the broker to another machine: copy `.local/spotify/`, run the script there, update `brokerUrl`
+in `config.local.json`, rebuild. Without the broker the app plays the stream radio instead.
+
 ## 5c. Remote control from the Mac (optional)
 `.local/venv/bin/python tools/tvremote.py pair` once (accept the prompt on the TV), then
 `tools/tvremote.py key KEY_HOME` etc. Needs `.local/tv.env` with `TV_IP` and `TV_MAC`.
