@@ -78,6 +78,9 @@ excludes:
   - \.wgt
   - tizen_web_project.yaml
   - webUnitTest/*
+  - \.tizen-rds/.*
+  - \.code-workspace
+  - config\.local\.example\.json
 
 # project dependencies
 deps: []
