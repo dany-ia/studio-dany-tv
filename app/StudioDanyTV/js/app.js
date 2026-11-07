@@ -190,6 +190,7 @@
     if (q.radio === "0") CFG.radio = false;
     if (q.clean === "1") CFG.clean = true;        // no "(dev)" marker: for screenshots and the README GIF
     if (q.warm != null) CFG.warm = parseFloat(q.warm);          // pre-simulate the patrons for N seconds (screenshots)
+    if (q.uptime != null) Scene.setUptime(parseFloat(q.uptime));   // pretend the app has been running for N seconds (shader precision checks)
     if (q.broker) window.BROKER_OVERRIDE = q.broker;             // e.g. http://127.0.0.1:8899 for a render on the broker's own machine
     if (q.readonly === "1") window.SPOTIFY_READONLY = true;     // show what plays, never send play/pause/transfer (renders)
   }

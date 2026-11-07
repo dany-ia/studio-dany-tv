@@ -40,6 +40,7 @@
       u: function (name) { if (!(name in uniforms)) uniforms[name] = gl.getUniformLocation(p, name); return uniforms[name]; },
       set1f: function (n, v) { var l = this.u(n); if (l) gl.uniform1f(l, v); },
       set2f: function (n, a, b) { var l = this.u(n); if (l) gl.uniform2f(l, a, b); },
+      set4f: function (n, a, b, c, d) { var l = this.u(n); if (l) gl.uniform4f(l, a, b, c, d); },
       set1i: function (n, v) { var l = this.u(n); if (l) gl.uniform1i(l, v); },
       draw: function () { gl.drawArrays(gl.TRIANGLES, 0, 3); }
     };

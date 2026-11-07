@@ -84,8 +84,8 @@ flowchart LR
     ST[scene.js<br/>hour, light model, weather params, moon phase]
   end
   subgraph gpu [WebGL background, 1280x720, bilinear upscale]
-    SKY[SKY pass → texture<br/>every 4th frame]
-    MAIN[MAIN pass every frame<br/>samples sky, computes sea + sand]
+    SKY[SKY pass → texture<br/>one quarter per frame, 3 textures rotating]
+    MAIN[MAIN pass every frame<br/>crossfades the two last skies, computes sea + sand]
   end
   subgraph cpu [2D sprite canvas, 960x540, CSS 2x nearest]
     SP[sprites.js<br/>cached layers + animated sprites]
@@ -154,10 +154,24 @@ fbm noise, the moon at its real position with the terminator drawn as the ellips
 `u = -k·sqrt(1 - v²)` in disc coordinates oriented along the bright limb (`k = 2·fraction - 1`,
 plus faint earthshine on the dark side), and clouds as fbm noise sampled in perspective (divided
 by height above the horizon) so they flatten toward the horizon and drift with the wind. Because
-the sky changes slowly, this pass renders to a texture only every 4th frame, which is what makes
-the 5-octave quality tier affordable.
+the sky changes slowly, a new sky texture is only finished every 4th frame, which is what makes
+the 5-octave quality tier affordable. It is rendered in four horizontal slices (scissor), one per
+frame, into a third texture, so no single frame carries the whole pass; when the last slice lands
+the textures rotate and the main pass crossfades from the previous sky to the new one over the
+next four frames. Motion is therefore continuous at 60 Hz, with a latency of three frames.
 
-The main pass runs every frame. Above the horizon it just samples the sky texture. The sea gets
+Precision housekeeping, learned the hard way on the Mali-G51: the app runs for days, so seconds
+since launch would grow past what fp32 `fract()` can resolve and the noise would start to step
+and show structure. The shaders never see a large time value: JS splits it into a coarse part
+(multiples of 1024 s, wrapped every 102400 s) and a fine remainder, every drift term is reduced
+modulo the noise period in a helper `T(k)`, the wind-driven drifts are integrated in JS in double
+precision, and the value-noise hash is periodic in 1024 lattice cells by construction (multipliers
+123/1024 and 456/1024, exact in fp32), so the reduction is seamless. Both passes add a ±0.5 LSB
+quasi-random dither: 8-bit gradients on a 98-inch panel otherwise show contours that visibly jump
+as the sunset colours move. The Milky Way band is gated to full night; at twilight it read as a
+faint diagonal seam across the sky.
+
+The main pass runs every frame. Above the horizon it samples the two sky textures. The sea gets
 a deep-to-shallow Caribbean palette by distance to the shore, a reflection of the real sky sampled
 just above the horizon (desaturated, so twilight doesn't turn the water pink), wave shading from
 fbm in mild perspective, a vertical light path under the sun or moon filled with horizontal
@@ -208,6 +222,11 @@ The 2024 DU9000 has a Mali-G51 behind WebGL2. Measured on the panel:
 | Same at 3840x2160 | 5-10 |
 | 1280x720, sky every frame, 5 octaves | 46 |
 | 1280x720, sky to texture every 4th frame, 5 octaves | **60** |
+| 1280x720, sky in 4 slices + crossfade, dither, periodic noise (v0.3.3) | **57-60** |
+
+The sky pass sits right at the frame budget: a heavier hash (hash12-style, ~10 more ops per
+lattice sample) cost 8 fps because the frame carrying the whole sky pass tipped over 16.7 ms.
+Slicing the pass over four frames removed that peak.
 
 And on the 2D side, every operation costs per pixel touched: a single full-screen 1080p canvas
 fill or blit costs several milliseconds, so the sprite canvas is 960x540, every cached layer is

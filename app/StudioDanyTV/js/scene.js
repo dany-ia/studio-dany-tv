@@ -3,7 +3,13 @@
    N frames, main pass every frame) and calls the sprite layer each frame. */
 (function (global) {
   "use strict";
-  var cv, G, gl, skyProg, mainProg, skyRT = null;
+  var cv, G, gl, skyProg, mainProg;
+  /* three sky textures: cur (newest complete), prev (the one before, for the crossfade) and work (being filled).
+     The sky pass is spread over skyEvery frames, one horizontal slice per frame (scissor), so no single frame
+     carries the whole 5-octave sky; when the last slice lands, work becomes cur and the crossfade restarts. */
+  var skyRT = [null, null, null], skyCur = 0, skyPrev = 1, skyWork = 2, slice = 0, sinceRot = 0, skyFade = 0;
+  var uptime = 0;                     // seconds added to the clock (URL ?uptime=604800 simulates a week of running, for precision checks)
+  var cloudDrift = 0, seaDrift = 0;   // wind-driven noise drifts, integrated per frame in double precision, wrapped at the 1024-cell noise period
   // defaults measured on the UN98DU9000 (2026-11-05): 1280x720, quality 2, sky pass every 4th frame = 60 fps with the sprite layer
   var W = 1280, H = 720, quality = 2, skyEvery = 4, frame = 0, started = false, last = 0, t0 = 0;
   var fps = { frames: 0, acc: 0, value: 0, worst: 0, maxFrame: 0 };
@@ -46,7 +52,12 @@
   var flash = 0;
   function setUniforms(p, S, t) {
     var A = S.astro;
-    p.set2f("u_res", W, H); p.set1f("u_time", t);
+    p.set2f("u_res", W, H);
+    // time for the shaders in small pieces (see shaders.js): every drift phase k*t reduced modulo the 1024-cell noise period, in double precision
+    var P = function (k) { return (k * t) % 1024; };
+    p.set4f("u_T0", P(0.10), P(0.08), P(0.35), P(0.3)); p.set4f("u_T1", P(2.2), P(0.2), P(1.1), P(0.7)); p.set2f("u_T2", P(2.0), P(5.0));
+    p.set1f("u_tLo", t % 1024); p.set1f("u_phase", (1.2 * t) % (2 * Math.PI));
+    p.set1f("u_cloudDrift", cloudDrift); p.set1f("u_seaDrift", seaDrift); 
     p.set1f("u_cloud", S.cloud); p.set1f("u_wind", S.windEff); p.set1f("u_quality", quality);
     p.set1f("u_rain", S.weather.rain); p.set1f("u_fog", S.weather.fog); p.set1f("u_flash", flash);
     p.set1f("u_elev", A.elev); p.set1f("u_sunUp", A.sunUp); p.set2f("u_sunPos", A.sun.x, A.sun.y);
@@ -56,26 +67,45 @@
 
   function resize(w, h) {
     W = w; H = h; cv.width = w; cv.height = h;
-    if (skyRT) skyRT.dispose(); skyRT = global.GLH.renderTarget(gl, w, h); frame = 0;
+    for (var i = 0; i < 3; i++) { if (skyRT[i]) skyRT[i].dispose(); skyRT[i] = global.GLH.renderTarget(gl, w, h); }
+    frame = 0; slice = 0; skyFade = 0;   // textures are blank: the next frame renders a full sky into cur and shows it at once
   }
 
   function draw(now) {
     if (!last) { last = now; t0 = now; }
-    var dt = now - last; last = now; var t = (now - t0) / 1000;
+    var dt = now - last; last = now; var t = (now - t0) / 1000 + uptime;
     fps.frames++; fps.acc += dt; if (dt > fps.maxFrame) fps.maxFrame = dt;
     if (fps.acc >= 1000) { fps.value = Math.round(fps.frames * 1000 / fps.acc); fps.worst = Math.round(fps.maxFrame); fps.frames = 0; fps.acc = 0; fps.maxFrame = 0; }
     var S = state(), L = light(S);
     if (global.Weather) { var f = global.Weather.update(t, dt / 1000, S.weather); if (f > 0.02 || flash > 0.02) global.Scene.skyDirty = true; flash = f; }
 
-    if (frame % skyEvery === 0 || global.Scene.skyDirty) {       // sky pass to texture every N frames
-      gl.bindFramebuffer(gl.FRAMEBUFFER, skyRT.fb); gl.viewport(0, 0, W, H);
-      skyProg.use(); setUniforms(skyProg, S, t); skyProg.draw();
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null); global.Scene.skyDirty = false;
+    // noise drifts: speed from the current effective wind, integrated here (the shader only ever sees a small number)
+    var ds = Math.min(dt, 100) / 1000;
+    cloudDrift = (cloudDrift + (0.006 + S.windEff * 0.0008) * 1.3 * ds) % 1024;
+    seaDrift = (seaDrift + (0.05 + S.windEff * 0.004) * ds) % 1024;
+
+    var sP = skyProg, mP = mainProg;
+    var dirty = global.Scene.skyDirty;
+    function skyPass(target, y0, y1) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, skyRT[target].fb); gl.viewport(0, 0, W, H);
+      if (y1 - y0 < H) { gl.enable(gl.SCISSOR_TEST); gl.scissor(0, y0, W, y1 - y0); }
+      sP.use(); setUniforms(sP, S, t); sP.draw();
+      gl.disable(gl.SCISSOR_TEST); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
+    function rotate() { var p = skyPrev; skyPrev = skyCur; skyCur = skyWork; skyWork = p; sinceRot = 0; slice = 0; }
+    if (frame === 0 || dirty) {                                   // first frame, or a lightning flash: full sky, shown at once
+      skyPass(skyWork, 0, H); rotate(); skyFade = 0; global.Scene.skyDirty = false;
+    } else {
+      skyPass(skyWork, Math.floor(H * slice / skyEvery), Math.floor(H * (slice + 1) / skyEvery));
+      if (++slice >= skyEvery) { rotate(); skyFade = 1; }
+      else sinceRot++;
+    }
+    var mix = skyFade ? Math.min(1, (sinceRot + 1) / skyEvery) : 1;   // crossfade prev -> cur over the skyEvery frames after a rotation
     gl.viewport(0, 0, W, H);
-    mainProg.use(); setUniforms(mainProg, S, t);
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, skyRT.tex); mainProg.set1i("u_sky", 0);
-    mainProg.draw();
+    mP.use(); setUniforms(mP, S, t); mP.set1f("u_skyMix", mix);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, skyRT[skyCur].tex); mP.set1i("u_sky", 0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, skyRT[skyPrev].tex); mP.set1i("u_skyPrev", 1);
+    mP.draw();
     frame++;
 
     if (global.Sprites) global.Sprites.draw(t, S, L);
@@ -94,6 +124,7 @@
       return true;
     },
     setRes: function (w, h) { resize(w, h); },
+    setUptime: function (sec) { uptime = sec; },
     setQuality: function (q) { quality = q; frame = 0; },
     setSkyEvery: function (n) { skyEvery = n; frame = 0; },
     state: state, light: light,

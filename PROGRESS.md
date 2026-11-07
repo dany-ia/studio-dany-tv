@@ -71,6 +71,22 @@ not resolve mDNS `.local` names (tested with the Air's and the Studio's names, t
 the request arrive by IP), so the scan is the working path; it took ~2 s and the cached IP makes the
 next boots instant. Verified on the TV: HUD showing the current track with the Air's broker stopped.
 
+## v0.3.3 (2026-11-06): sky stutter and seam
+Diagnosis on the panel: (1) the shaders received seconds since launch, unbounded (the app runs for
+days), so fp32 fract()/hash degrade with uptime; (2) the sky texture advanced in 4-frame steps and
+8-bit gradients showed contours that jumped as the sunset colours moved; (3) the "diagonal seam"
+was the Milky Way band (a rotated noise stripe) leaking in at twilight. Fixes: drift phases
+computed in JS in double precision and reduced modulo the 1024-cell noise period (the value-noise
+hash is periodic in 1024 cells by construction, lacunarity exactly 2); wind-driven drifts
+integrated in JS; sky rendered in four scissored slices into a third texture and crossfaded over
+the next four frames; ±0.5 LSB quasi-random dither in both passes; Milky Way gated to full night.
+Measured on the TV (overlay open): v0.3.2 baseline 59-60 fps; first attempt with a hash12-style
+hash 48-50 (the sky-pass frame tipped over budget, confirmed by compiling old and new shaders side
+by side: old/old 60, new sky 50-52, new main 56); final 57-60 (worst frame 17-34 ms). Sky every 2nd
+frame measured 39 fps and was dropped. Camera bursts (30 fps, 3 s) in `.local/evidence/v033/`:
+the sky-region frame-to-frame variation (sd of the mean luminance difference) fell from
+0.09-0.35 to 0.01-0.05 at 18:15, 23:00 and real time.
+
 ## Next action (phase 2)
 - Build `app/StudioDanyTV` from `reference/tv_ambient_v1.html`: pixel clock, Spanish date, Open-Meteo,
   lofi radio on OK, procedural city at 60 fps on the TV engine, scanlines/vignette. Autorun on power-on.
