@@ -62,6 +62,8 @@ If only the DUID changed: `generate-samsung-distributor` refuses to overwrite; m
 node "$R/project-manager-cli.js" build --project "$PWD/app/StudioDanyTV" --build-type Debug --sign-profile studiodany
 node "$R/project-manager-cli.js" install --package "$PWD/app/StudioDanyTV/Debug/StudioDanyTV.wgt" --run
 ```
+The built `.wgt` packages `config.local.json` (the live broker app key) and a signature bound to this
+TV's DUID: it is private, never share or upload it.
 
 App ids: `E58Zxev8MZ.StudioDanyTV` (package `E58Zxev8MZ`); hello app `5Fl59spfJV.StudioDanyHello`.
 Check the TV sees it: `curl -s http://<tv-ip>:8001/api/v2/applications/E58Zxev8MZ.StudioDanyTV`.

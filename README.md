@@ -236,6 +236,10 @@ reads 57.
 
 ## Install on any Samsung Tizen TV
 
+> **No prebuilt `.wgt`, on purpose.** Samsung distributor certificates are bound to each TV's DUID, so
+> every TV must be signed with its own certificate. The signing steps are in [REINSTALL.md](REINSTALL.md);
+> the [latest release](https://github.com/dany-ia/studio-dany-tv/releases/latest) carries the version notes.
+
 Tested on a UN98DU9000 (Tizen 8/9). Any 2017+ Samsung TV with Developer Mode should work.
 
 1. **TV**: Home → Apps, type `1 2 3 4 5` on the remote, set Developer Mode **On** and the Host
@@ -301,7 +305,9 @@ The TV then talks to the Spotify Web API directly (Premium account required for 
 Security: the broker binds the OAuth dance to loopback only, and the LAN token endpoint answers
 only private (RFC 1918) source addresses presenting the app key; `/status` is public on the LAN but
 carries nothing beyond the broker's name and whether it is logged in. Nothing is exposed to the
-internet. Tokens are never committed (`.local/` and `config.local.json` are ignored).
+internet. Tokens are never committed (`.local/` and `config.local.json` are ignored). The built `.wgt`
+(`app/StudioDanyTV/Debug/`) packages `config.local.json`, so it contains your live app key: keep it
+private and never share or upload it.
 
 ## Repository layout
 
