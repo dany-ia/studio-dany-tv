@@ -3,7 +3,7 @@
      ({ brokerUrl, brokerScan, appKey, deviceId, deviceName }); the TV never sees the refresh token.
    - The broker machine's IP can change (no DHCP reservations on the ISP modem), so the broker is found at
      startup, each candidate verified with GET /status answering { broker: "studiodany" }:
-       1. brokerUrl as configured (an mDNS name such as http://Daniels-Mac-Studio.local:8899, when the TV resolves it)
+       1. brokerUrl as configured (an mDNS name such as http://My-Mac.local:8899, when the TV resolves it)
        2. the last URL that worked (localStorage "brokerUrl")
        3. a one-off scan of brokerScan (e.g. "192.168.0.") hosts 2-254 on port 8899, 24 probes at a time
      The hit is cached; when the broker stops answering the search runs again (at most once a minute).

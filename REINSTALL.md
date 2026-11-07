@@ -2,7 +2,7 @@
 
 For after a TV firmware update, a Mac reinstall, or a lost Developer Mode setting.
 Private values (IPs, DUID, password) are in `.local/` (git-ignored); the placeholders below
-are what to look up there.
+are what to look up there. Real values for this setup live in `.local/device-inventory.md` (git-ignored).
 
 ## 0. What is where
 | Thing | Path |
@@ -87,13 +87,13 @@ remote-channel `tools/tvremote.py launch` does not foreground an app that is alr
 in the background (REST shows `"running": true, "visible": false`).
 
 ## 5b2. Spotify (primary audio)
-Since v0.3.2 the broker runs on the Mac Studio (`dany_va@Daniels-Mac-Studio.local`, ssh key from this
+Since v0.3.2 the broker runs on the Mac Studio (`<user>@<mac-studio>.local`, ssh key from this
 Air in `~/.ssh/id_ed25519`) as the LaunchAgent `com.studiodany.spotify-broker`: script and state in
 `~/studiodany/` there (`tools/spotify-broker.js`, `.local/spotify/config.json` + `tokens.json`), log
 in `~/Library/Logs/studiodany-spotify-broker.log`. Useful commands on the Studio:
 `launchctl kickstart -k gui/$(id -u)/com.studiodany.spotify-broker` (restart),
 `launchctl bootout gui/$(id -u)/com.studiodany.spotify-broker` (stop), `curl localhost:8899/status`.
-To reinstall or update it from this repo: `tools/broker-install.sh dany_va@Daniels-Mac-Studio.local`
+To reinstall or update it from this repo: `tools/broker-install.sh <user>@<mac-studio>.local`
 (copies the script and `.local/spotify/`, writes the plist, bootstraps it, prints `/status`). Never run
 two brokers at once: the PKCE refresh token rotates on every refresh and the other copy dies with
 "refresh failed". If the refresh token is gone: `node tools/spotify-broker.js --login` on the machine
@@ -101,9 +101,9 @@ that holds `.local/spotify/`, approve in the browser, then re-run the install sc
 The TV build needs `app/StudioDanyTV/config.local.json` (`brokerUrl`, `brokerScan`, app key, device id)
 before `build`. The copy of `.local/spotify/` on this Air is stale from the day of the move (the Studio
 rotates the refresh token); the authoritative state is `~/studiodany/.local/spotify/` on the Studio.
-To bring it back here: `scp dany_va@Daniels-Mac-Studio.local:studiodany/.local/spotify/tokens.json
+To bring it back here: `scp <user>@<mac-studio>.local:studiodany/.local/spotify/tokens.json
 .local/spotify/` after stopping the Studio's agent. Headless renders from this Air use
-`broker=http://Daniels-Mac-Studio.local:8899&readonly=1`. The TV finds the broker by itself when the Studio's IP changes (config URL → cached
+`broker=http://<mac-studio>.local:8899&readonly=1`. The TV finds the broker by itself when the Studio's IP changes (config URL → cached
 URL → scan of `brokerScan` on port 8899); this Tizen does not resolve `.local` names, so the scan is
 what actually works, and the overlay line `audio spotify @ <ip> (scan|cache|config)` tells which path
 was used. Without a broker the app plays the stream radio instead.
@@ -114,7 +114,7 @@ sdb "failed to connect", the remote "No route to host", Spotify on the TV falls 
 Find the TV again by scanning port 8001 (`curl http://192.168.0.N:8001/api/v2/` for N in 2..254,
 the TV answers with its name) and fix, in this order:
 1. The TV's Developer Mode **Host PC IP** must equal the Mac's current IP, or sdb is refused.
-   Quickest: give the Mac its old IP back (`sudo networksetup -setmanual Wi-Fi 192.168.0.19
+   Quickest: give the Mac its old IP back (`sudo networksetup -setmanual Wi-Fi <mac-ip>
    255.255.255.0 192.168.0.1`, undo with `-setdhcp Wi-Fi`). Durable: DHCP reservations (5a2).
 2. `.local/tv.env`: TV_IP / TV_SERIAL to the TV's current IP, then `remote-device-cli.js connect`.
 3. Broker: nothing to do since v0.3.2 (the TV authenticates by app key, not by IP, and finds the
@@ -129,14 +129,14 @@ keeps the LAN tidy). The broker machine no longer needs one (5b2). MACs and curr
 `.local/device-inventory.md`. The izzi modem offers no reservations: use the fallback below.
 1. Router admin page (`http://192.168.0.1`) → DHCP / LAN → "Reserved addresses" (name varies by
    vendor: *DHCP reservation*, *Static lease*, *Address reservation*). Add one entry per device,
-   MAC → IP: TV `192.168.0.16`, Mac `192.168.0.19`, soundbar its current IP. Save, then reboot each
+   MAC → IP: TV `<tv-ip>`, Mac `<mac-ip>`, soundbar its current IP. Save, then reboot each
    device (or renew its lease) and check with `arp -a`.
 2. The Mac: macOS rotates a *private Wi-Fi address* per network by default, which defeats a
    reservation. System Settings → Wi-Fi → (i) on this network → **Private Wi-Fi address: Off** (or
    *Fixed*), then reserve the MAC that `ifconfig en0 | grep ether` shows afterwards.
 3. Once the Mac is reserved, go back to DHCP: `sudo networksetup -setdhcp Wi-Fi`.
 Fallback when the router cannot reserve (ISP box, no admin access): keep manual IPs on both
-ends. Mac: `sudo networksetup -setmanual Wi-Fi 192.168.0.19 255.255.255.0 192.168.0.1` (DNS:
+ends. Mac: `sudo networksetup -setmanual Wi-Fi <mac-ip> 255.255.255.0 192.168.0.1` (DNS:
 `sudo networksetup -setdnsservers Wi-Fi 192.168.0.1`). TV: Menú → Conexión → Red → Estado de red →
 Config. IP → IP manual, same gateway and mask. Either way, if the Mac's IP ever changes, update
 the TV's Developer Mode Host PC IP (Apps → type 12345 → Host PC IP) and `brokerUrl` in

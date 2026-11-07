@@ -26,3 +26,24 @@ __pycache__/
 
 # Spotify: TV-side config with the broker app key (packaged into the .wgt, never committed)
 app/**/config.local.json
+
+# secrets and signing material (belt and braces; the real state lives under .local/)
+.env.*
+!.env.example
+*.pfx
+*.jks
+tokens.json
+secrets.txt
+secrets/
+app/**/author-signature.xml
+app/**/signature*.xml
+app/**/.sign/
+.sign/
+*.sign
+tizen-studio/
+tizen-sdk-data/
+# copy of the broker install directory, if ever synced back from the Mac Studio
+studiodany/
+# watcher pairing state outside .local/ (defensive)
+watcher/pair*.json
+watcher/pair*.txt
