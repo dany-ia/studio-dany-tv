@@ -96,7 +96,7 @@
     }
     R(x1 - 1, y - 3, 2, 10, "#8a5a2b"); R(x2, y - 3, 2, 10, "#8a5a2b");               // spreader bars
     R(x1 - 6, y - 5, 6, 2, "#5a3a1a"); R(x2 + 1, y - 5, 6, 2, "#5a3a1a");              // ropes to the trunks
-    R(x1 + Math.round(n * 0.42), y + S - 2, 20, 6, "#5ea8ff"); R(x1 + Math.round(n * 0.42) + 2, y + S - 1, 16, 2, "#8cc4ff");   // pillow
+    R(x1 + Math.round(n * 0.36), y + S - 2, 20, 6, "#5ea8ff"); R(x1 + Math.round(n * 0.36) + 2, y + S - 1, 16, 2, "#8cc4ff");   // pillow
   }
 
   /* ---------- tiki bar: back part (posts, wall, bottles, roof, sign, lights) ---------- */
@@ -357,6 +357,10 @@
     });
     g.drawImage(c, ox, oy);
   }
+  /* The hammock hangs low (v0.4): its lowest point is about hip height over the sand, so a visitor can climb in.
+     HAM is shared with ambient.js, which draws the guest behind / in front of the cloth at the current swing. */
+  var HAM = { x1: 166, x2: 346, y: 388, S: 24 };
+  function hamSwing(amp, phase) { var f = Math.floor(((phase % (2 * Math.PI)) / (2 * Math.PI)) * HAM_FRAMES); return Math.sin((f + 0.5) / HAM_FRAMES * 2 * Math.PI) * amp; }
   function hammockAt(x1, x2, y, amp, phase) {
     var f = Math.floor(((phase % (2 * Math.PI)) / (2 * Math.PI)) * HAM_FRAMES), key = Math.round(amp * 2) + ":" + f;
     var c = cached(hamCache, key, x2 - x1 + 24, 60, function () { hammock(12, x2 - x1 + 12, 12, Math.sin((f + 0.5) / HAM_FRAMES * 2 * Math.PI) * amp); });
@@ -383,7 +387,10 @@
     if (Object.keys(palmCache).length > 100) palmCache = {};                     // wind changed a lot: drop stale frames
     if (Object.keys(hamCache).length > 60) hamCache = {};
     palmAt(0, 156, 456, 234, 30, amp, palmPhase, 0); palmAt(1, 348, 450, 258, -24, amp * 0.8, palmPhase + 1.3, 2);
-    hammockAt(172, 341, 316, 0.6 + ws * 0.08, hamPhase);        // attached where the trunks pass y=316
+    var hamAmp = 0.6 + ws * 0.08 + (A ? A.hammockBoost() : 0), hsw = hamSwing(hamAmp, hamPhase);   // a guest rocks it a little more
+    if (A) A.hammockBack(t, hsw, HAM);                          // guest sitting up: behind the cloth
+    hammockAt(HAM.x1, HAM.x2, HAM.y, hamAmp, hamPhase);         // attached where the trunks pass y=388
+    if (A) A.hammockFront(t, hsw, HAM);                         // guest lying down: on the cloth
     var fireLit = L.lightsOn > 0.05 && W.rain < 0.3;            // rain puts the fire out
     if (fireLit) firePit(t, L);
     if (A) A.sand(t, dt, S, L, fireLit);                          // crab, fireflies, grill, smoke, wind debris
@@ -400,6 +407,7 @@
     lighting(S, L, closed, W, ldx);
     if (!closed) { g.save(); g.beginPath(); g.rect(X + 96, 300, 110, 120); g.clip(); bartender(t, S, L, S.hour < 12); g.restore(); }   // above the counter only
     if (D) D.lights(L, t);                                        // candle / Christmas-light glows stay bright at night
+    if (A) A.glow(t, L);                                          // fireworks
     if (WX) WX.draw(t, W, S, L);                                  // fog tint, rain, lightning
     if (post.on) g.drawImage(layers.post, 0, 0);                // vignette + scanlines, one cached layer
   }

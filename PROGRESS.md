@@ -87,6 +87,26 @@ frame measured 39 fps and was dropped. Camera bursts (30 fps, 3 s) in `.local/ev
 the sky-region frame-to-frame variation (sd of the mean luminance difference) fell from
 0.09-0.35 to 0.01-0.05 at 18:15, 23:00 and real time.
 
+## v0.4.0 (2026-11-15): beach life, random events by hour, weekday, date and weather (NOT yet on the TV)
+Written in a Claude chat session against the working tree; verified only in headless Chrome (SwiftShader) plus an
+11-hour simulated soak across hours / weather codes / wind / dates with no exceptions and a bounded actor count
+(max 39 with forced events). Still to do: build the .wgt, install, and measure fps on the panel.
+- Hammock lowered: attached at y=388 (was 316), lowest point about hip height. `HAM` in sprites.js is shared with
+  ambient.js through `Ambient.hammockBack/Front/Boost`; a guest climbs in, rocks it, naps, sits up for a drink.
+- Director in ambient.js ("beach life"): one eligible event every 22-60 s (x0.7 on weekends and fiestas), one event
+  per zone, per-event cooldown, weights from the context (hour, weekday, month/day, rain, storm, wind, temperature
+  from Open-Meteo as `ENV.temp`, full moon, fire lit). Events: hamaca, fogata (marshmallows at the fire pit, night),
+  nadar (2-4 swimmers, 5-8 on hot days / weekends), chapuzon (12 at once), surf (more with wind >= 14 km/h),
+  delfines (day only), pareja (chat then a kiss; x4 on Feb 14, more at sunset / full moon), platica, pelea (two
+  seated patrons, dust cloud, they make up or one leaves; mostly 20:00-03:00, more on weekends), gaviotas (feeding
+  the gulls, day), papalote (wind 12-34), corredor (06:20-09:30 and 17-19), paraguas (rain), fuegos (Sep 15-16,
+  Dec 24, Dec 31, Jan 1; rarely on Saturday nights), tortuga (May-Oct nights).
+- No birds at night: the pelican only spawns with daylight (L.d > 0.35) and is dropped below 0.2.
+- Sea actors are painted in `Ambient.horizon` (behind sand, palms, hammock, bar) and get a source-atop dusk tint
+  over the sea band; fireworks are painted after the lighting pass (`Ambient.glow`).
+- Dev overlay: new field "evento" (UP/DOWN fires the next/previous event now, ignoring conditions). Browser:
+  `?event=fogata,delfines` (combine with `&hour=21&warm=45`).
+
 ## Next action (phase 2)
 - Build `app/StudioDanyTV` from `reference/tv_ambient_v1.html`: pixel clock, Spanish date, Open-Meteo,
   lofi radio on OK, procedural city at 60 fps on the TV engine, scanlines/vignette. Autorun on power-on.
