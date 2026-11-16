@@ -128,6 +128,16 @@ Written in a Claude chat session against the working tree; verified only in head
   pass so the night tint does not dim them; skipped where the boat is behind a trunk or the bar.
 - Weather line 2 reads "nublado · ahora 26° · mín 23° · máx 28°" (the bare temperature after the sky was confusing).
 
+## v0.4.3 (2026-11-15): fire pit moved, playlist label follows what is really playing (NOT yet on the TV)
+- Fire pit moved from (300,505), where the now-playing block covered it, to (474,446): between the two beach chairs
+  and a little up the beach (`FIRE` in sprites.js, `FIREP` in ambient.js; chairs nudged apart to 424 / 498). Seats,
+  sticks, smoke and glow follow. The night tint now also covers the strip above the sand between the palms box and
+  the bar (heads of the people sitting around the fire).
+- Spotify label: the slot name only shows while one of the three slot playlists is the playing context; otherwise the
+  HUD shows the name of the user's playlist (GET /playlists/{id}?fields=name, cached), album, artist, "tus me gusta"
+  or plain "spotify". At a slot boundary the app no longer replaces music the user chose; the slot playlist returns
+  when theirs ends. Not testable headless (needs the broker): check on the TV.
+
 ## Next action (phase 2)
 - Build `app/StudioDanyTV` from `reference/tv_ambient_v1.html`: pixel clock, Spanish date, Open-Meteo,
   lofi radio on OK, procedural city at 60 fps on the TV engine, scanlines/vignette. Autorun on power-on.

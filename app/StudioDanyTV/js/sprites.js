@@ -266,6 +266,7 @@
     }
   }
 
+  var FIRE = { x: 474, y: 446 };
   /* ---------- middle ground: beach chairs, fire pit, crab path (static parts cached in the sand layer) ---------- */
   function drawMidground() {
     // two beach chairs (striped canvas on wooden frames), facing the sea
@@ -274,16 +275,15 @@
       for (var i = 0; i < 24; i++) { var k = i / 24, yy = y - 24 + k * 14; R(x + 3 + i, yy, 1, 10, (Math.floor(i / 4) % 2) ? c1 : c2); }
       R(x + 3, y - 10, 24, 3, c1); R(x, y + 2, 30, 2, "#5a3a1a"); R(x + 4, y + 4, 2, 4, "#5a3a1a"); R(x + 24, y + 4, 2, 4, "#5a3a1a");
     }
-    chair(436, 470, "#2bb3a9", "#f6f6f6"); chair(492, 486, "#e8453c", "#fff2cc");
-    R(470, 494, 8, 5, "#ffd36b"); R(471, 490, 6, 4, "#ff9d3b"); R(473, 486, 2, 4, "#5a3a1a");          // drink in the sand
-    // fire pit: ring of stones, logs (flames are drawn per frame after sunset)
-    var fx = 300, fy = 505;
+    chair(424, 474, "#2bb3a9", "#f6f6f6"); chair(498, 488, "#e8453c", "#fff2cc");
+    R(466, 498, 8, 5, "#ffd36b"); R(467, 494, 6, 4, "#ff9d3b"); R(469, 490, 2, 4, "#5a3a1a");          // drink in the sand
+    // fire pit between the two chairs, a little up the beach (v0.4.3: clear of the now-playing block): ring of stones, logs (flames per frame after sunset)
+    var fx = FIRE.x, fy = FIRE.y;
     for (var s = 0; s < 14; s++) { var a = s / 14 * Math.PI * 2; R(fx + Math.cos(a) * 20 - 2, fy + Math.sin(a) * 8 - 2, 5, 4, s % 2 ? "#8a8a8a" : "#a9a9a9"); }
     R(fx - 12, fy - 3, 24, 5, "#4e3014"); R(fx - 9, fy - 6, 18, 4, "#6b4a22"); R(fx - 3, fy - 8, 6, 3, "#3b2314");
     // crab path: paired dots crossing the sand (the crab walks it in step C)
     for (var i = 0; i < 26; i++) { var px = 120 + i * 13, py = 528 - i * 2.6 + Math.sin(i) * 2; R(px, py, 1, 1, "#d2b884"); R(px + 2, py + 2, 1, 1, "#d2b884"); }
   }
-  var FIRE = { x: 300, y: 505 };
   function firePit(t, L) {                                     // lit after sunset: flickering flames
     for (var i = 0; i < 6; i++) { var h = 6 + Math.round(Math.abs(Math.sin(t * 9 + i * 1.3)) * 10), w = 4 + (i % 2), x = FIRE.x - 10 + i * 4 + Math.round(Math.sin(t * 7 + i) * 1.5);
       R(x, FIRE.y - 6 - h, w, h, i % 3 === 0 ? "#ffd36b" : "#ff9d3b"); R(x + 1, FIRE.y - 6 - Math.round(h * 0.5), w - 2, Math.round(h * 0.5), "#ffe8a8"); }
@@ -312,6 +312,7 @@
       var k1 = a1 * (1 - a2) / A, k2 = a2 / A, rgb = Math.round(18 * k1 + 255 * k2) + "," + Math.round(28 * k1 + 130 * k2) + "," + Math.round(72 * k1 + 60 * k2);
       g.fillStyle = "rgba(" + rgb + "," + A.toFixed(3) + ")";
       g.fillRect(0, SHORE_Y, LW, LH - SHORE_Y); g.fillRect(PALMS[0], PALMS[1], PALMS[2], SHORE_Y - PALMS[1]);
+      g.fillRect(PALMS[0] + PALMS[2], 356, BAR[0] - PALMS[0] - PALMS[2], SHORE_Y - 356);   // the strip above the sand between the palms and the bar: heads of the people around the fire pit
       // the bar keeps its own night palette: the same blue tint a touch lighter, so roof, posts, bottles and sign read desaturated, not muddy
       g.fillStyle = "rgba(" + rgb + "," + (A * 0.8).toFixed(3) + ")"; g.fillRect(BAR[0], BAR[1], BAR[2], SHORE_Y - BAR[1]);
     }
@@ -434,6 +435,7 @@
     setPost: function (o) { for (var k in o) post[k] = o[k]; buildPost(); },
     draw: draw, text: text,
     /* painter shared with decor.js / ambient.js / weather.js: they draw on whatever context is current */
+    fire: FIRE,
     painter: { R: R, text: text, radial: radial, ctx: function () { return g; }, withContext: function (c, fn) { var G = g; g = c; fn(); g = G; } }
   };
 })(window);

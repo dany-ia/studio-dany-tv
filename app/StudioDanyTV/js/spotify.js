@@ -19,6 +19,22 @@
   var cfg = null, playlists = null, token = null, tokenExp = 0, deviceId = null;
   var state = { ok: false, reason: "iniciando", playing: false, track: "", artist: "", art: "", slot: "", device: "", broker: "" };
   var slotNow = null, lastSlotStarted = null, onChange = null, hourFn = null, pollTimer = null, failures = 0;
+  var ctxNames = {};                                            // playlist uri -> name ("" while it is being fetched or when it cannot be read)
+  /* What the HUD shows above the track: the slot name while one of our three playlists plays; when the user picked
+     something else from their own Spotify, that playlist's (or album's) name instead. Returns { name, own }. */
+  function contextLabel(j) {
+    var uri = j.context && j.context.uri, type = j.context && j.context.type, i;
+    for (i = 0; i < SLOTS.length; i++) if (uri && playlists && playlists[SLOTS[i].key] === uri) return { name: SLOTS[i].name, own: false };
+    if (!uri) return { name: "spotify", own: true };
+    if (type === "playlist") {
+      if (ctxNames[uri] == null) { ctxNames[uri] = ""; api("GET", "/playlists/" + uri.split(":").pop() + "?fields=name", null, function (err, st, p) { if (!err && st === 200 && p && p.name) { ctxNames[uri] = p.name; poll(); } }); }
+      return { name: ctxNames[uri] || "spotify", own: true };
+    }
+    if (type === "album" && j.item && j.item.album && j.item.album.name) return { name: j.item.album.name, own: true };
+    if (type === "artist" && j.item && j.item.artists && j.item.artists.length) return { name: j.item.artists[0].name, own: true };
+    if (type === "collection" || /:collection/.test(uri)) return { name: "tus me gusta", own: true };
+    return { name: "spotify", own: true };
+  }
   var SLOTS = [{ key: "coffee", name: "Lofi Coffee", from: 6, to: 12 }, { key: "reggae", name: "Lofi Reggae", from: 12, to: 19 }, { key: "jazz", name: "Jazz Lofi", from: 19, to: 6 }];
 
   function slotFor(h) { for (var i = 0; i < SLOTS.length; i++) { var s = SLOTS[i], inside = s.from <= s.to ? (h >= s.from && h < s.to) : (h >= s.from || h < s.to); if (inside) return s; } return SLOTS[0]; }
@@ -113,9 +129,9 @@
         return emit();
       }
       var onOurDevice = j.device.id === deviceId;
-      state.ok = true; state.reason = ""; state.playing = !!j.is_playing; state.device = j.device.name; state.slot = slot.name;
+      state.ok = true; state.reason = ""; state.playing = !!j.is_playing; state.device = j.device.name; var cl = contextLabel(j); state.slot = cl.name;
       if (j.item) { state.track = j.item.name; state.artist = (j.item.artists || []).map(function (a) { return a.name; }).join(", "); var imgs = (j.item.album && j.item.album.images) || []; state.art = imgs.length ? imgs[imgs.length - 1].url : ""; }
-      if (onOurDevice && slot.key !== lastSlotStarted && slotNow !== null && slotNow !== slot.key) startSlot(slot);   // boundary crossed
+      if (onOurDevice && slot.key !== lastSlotStarted && slotNow !== null && slotNow !== slot.key && !cl.own) startSlot(slot);   // boundary crossed (never over music the user chose: the slot playlist comes back when theirs ends)
       slotNow = slot.key; if (lastSlotStarted === null) lastSlotStarted = slot.key;
       emit();
     });

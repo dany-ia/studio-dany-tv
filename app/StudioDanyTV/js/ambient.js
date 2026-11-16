@@ -9,7 +9,7 @@
   "use strict";
   var R, P, HOR_Y = 292, SHORE_Y = 394, X = 588;
   var pelican = { t: -1 }, crab = { t: -1 }, ferry = { t: -1 }, boat = { t: -1 }, next = { pelican: 20, crab: 35, ferry: 60, boat: 140 };
-  var smoke = [], flies = [], debris = [];
+  var smoke = [], flies = [], debris = [], FIREP = { x: 474, y: 446 };   // fire pit (same as Sprites.fire)
 
   function rnd(a, b) { return a + Math.random() * (b - a); }
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -206,7 +206,7 @@
   function spawnSpecial(t, h) {
     if (special) return;
     var r = Math.random();
-    if (h >= 8 && h < 18 && r < 0.45) special = { kind: "kid", x: -14, y: WALK_Y, dir: 1, state: "in", tx: rnd(200, 470), ty: rnd(404, 424), t0: t, stay: rnd(25, 45), walk: 0 };
+    if (h >= 8 && h < 18 && r < 0.45) special = { kind: "kid", x: -14, y: WALK_Y, dir: 1, state: "in", tx: rnd(200, 420), ty: rnd(404, 424), t0: t, stay: rnd(25, 45), walk: 0 };
     else if (h >= 9 && h < 21) special = { kind: "selfie", v: Math.floor(Math.random() * VARIANTS.length), x: -14, y: rnd(498, 514), dir: 1, state: "in", tx: rnd(120, 520), t0: t, stay: rnd(14, 24), flashAt: [], walk: 0 };
     else return;
     if (special.kind === "selfie") { for (var i = 0; i < 3; i++) special.flashAt.push(rnd(3, special.stay - 2)); }
@@ -277,7 +277,7 @@
   /* ---------- particles ---------- */
   function updSmoke(t, dt, L, S, lit, grillOn) {
     var w = S.windEff != null ? S.windEff : S.wind;
-    if (lit && Math.random() < 0.35) smoke.push({ x: 300 + rnd(-6, 6), y: 492, vx: rnd(-3, 3) + w * 0.4, vy: -rnd(10, 16), a: 0.35, life: 0 });
+    if (lit && Math.random() < 0.35) smoke.push({ x: FIREP.x + rnd(-6, 6), y: FIREP.y - 13, vx: rnd(-3, 3) + w * 0.4, vy: -rnd(10, 16), a: 0.35, life: 0 });
     if (grillOn && Math.random() < 0.25) smoke.push({ x: 936 + rnd(-4, 4), y: 492, vx: rnd(-2, 2) + w * 0.4, vy: -rnd(9, 14), a: 0.3, life: 0 });
     for (var i = smoke.length - 1; i >= 0; i--) { var p = smoke[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life += dt; p.a -= dt * 0.07; if (p.a <= 0) { smoke.splice(i, 1); continue; }
       var s = 2 + Math.floor(p.life * 2); P.ctx().fillStyle = "rgba(200,200,210," + p.a.toFixed(2) + ")"; P.ctx().fillRect(Math.round(p.x), Math.round(p.y), s, s); }
@@ -334,7 +334,7 @@
   }
   function actor(o) { o.walk = 0; if (!o.dir) o.dir = 1; if (o.v == null) o.v = Math.floor(Math.random() * VARIANTS.length); agents.push(o); return o; }
   function busy(z) { for (var i = 0; i < agents.length; i++) if (agents[i].zone === z) return true; return false; }
-  function sandX(a, b) { var x = rnd(a, b); return x > 258 && x < 342 ? (x < 300 ? x - 84 : x + 84) : x; }   // a free spot on the open sand, never on the fire pit
+  function sandX(a, b) { return rnd(a, b); }   // a spot on the open front sand (the fire pit sits further up the beach since v0.4.3)
   function walker(a) { var w = WEAR; if (a.zone === "swim") WEAR = "d"; put(walkFrame(a.v, Math.floor(a.walk) % 2, a.dir), a.x, a.y); WEAR = w; }   // swimmers stay in swimwear whatever the hour
   function say(a, t, icons, every) { if (t > (a.nextBubble || 0)) { a.icon = pick(icons); a.bubbleUntil = t + rnd(2, 3); a.nextBubble = t + rnd(every, every * 2.2); } }
 
@@ -417,7 +417,7 @@
   }
 
   /* ---------- 2. bonfire: a few people sit around the fire pit at night and roast marshmallows ---------- */
-  var SPOTS = [[256, 497, 1], [344, 497, -1], [228, 508, 1], [372, 508, -1], [252, 524, 1], [348, 524, -1]];
+  var SPOTS = [[434, 437, 1], [514, 437, -1], [414, 447, 1], [532, 448, -1], [438, 425, 1], [510, 425, -1]];   // around the fire pit, clear of the two chairs
   function evBonfire(t, C, force) {
     var n = Math.min(6, 2 + Math.floor(rnd(0, C.weekend || C.fiesta ? 4.99 : 2.99))), stay = rnd(90, 210);
     for (var i = 0; i < n; i++) actor({ zone: "fire", x: -16 - i * 20, y: WALK_Y, spot: SPOTS[i], state: "in", stay: stay + i * 3, forced: force, m: 0, cook: rnd(12, 20), burn: false, eating: false, eatUntil: 0, coldAt: 0, nextBubble: t + rnd(6, 16), step: stepRoast, draw: drawRoast });
@@ -441,7 +441,7 @@
     if (a.state !== "roast") { walker(a); return; }
     var d = a.dir; put(groundSitFrame(a.v, d, a.eating ? 1 : 0), a.x, a.y);
     if (!a.eating) {                                        // the stick toward the flames and the marshmallow: white, golden, brown... or on fire
-      var hx = a.x + d * 14, hy = a.y - 20, tx = 300 - d * 13, ty = hy + 4, m = a.m, n = Math.max(2, Math.round(Math.abs(tx - hx) / 4));
+      var hx = a.x + d * 14, hy = a.y - 20, tx = FIREP.x - d * 13, ty = hy + 4, m = a.m, n = Math.max(2, Math.round(Math.abs(tx - hx) / 4));
       for (var i = 0; i < n; i++) R(hx + (tx - hx) * i / n - (d > 0 ? 0 : 4), hy + Math.round(4 * i / n), 4, 1, "#5a3a1a");
       R(tx - 2, ty - 2, 4, 4, m < 0.45 ? "#ffffff" : (m < 0.8 ? "#f4dcae" : (m < 1 ? "#c98b4a" : "#3b2314")));
       if (m >= 1) { var fl = Math.floor(t * 10) % 2; R(tx - 2, ty - 6 - fl, 4, 4, "#ff9d3b"); R(tx - 1, ty - 8 - fl, 2, 3, "#ffd36b"); }
@@ -675,7 +675,7 @@
       else { Q(-4, -14, 3, 12, V.pants); Q(1, -14, 3, 12, V.pants); Q(-4, -2, 3, 2, "#2b1d14"); Q(1, -2, 3, 2, "#2b1d14"); }
     });
   }
-  var WATCH_X = [30, 56, 82, 108, 134, 196, 222, 248, 272, 378, 404, 428], LEAD = 26;      // free spots along the shore (clear of trunks, fire pit and chairs)
+  var WATCH_X = [30, 56, 82, 108, 134, 196, 222, 248, 274, 300, 378, 404], LEAD = 26;      // free spots along the shore (clear of trunks, fire pit and chairs)
   function spectators(t, until, force) {
     var xs = WATCH_X.slice(), n = 5 + Math.floor(rnd(0, 4.99));
     for (var i = 0; i < n; i++) actor({ zone: "show", x: -16 - i * 14, y: WALK_Y + rnd(-4, 6), sx: xs.splice(Math.floor(Math.random() * xs.length), 1)[0], sy: 398 + Math.floor(rnd(0, 6)), state: "in", until: until + rnd(2, 8), forced: force, nextBubble: t + LEAD + rnd(2, 20), nextCheer: t + LEAD + rnd(3, 14), cheerUntil: 0,
