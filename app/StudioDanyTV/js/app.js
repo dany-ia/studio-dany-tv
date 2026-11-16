@@ -40,13 +40,16 @@
   };
   function hourOf(iso) { var m = /T(\d\d):(\d\d)/.exec(iso || ""); return m ? (+m[1]) + (+m[2]) / 60 : -1; }
   var lastWx = null;
-  function renderWx(j) {
+  function renderWx(j, offline) {
     var c = j.current, d = j.daily, forced = window.DEV && window.DEV.code != null;
     var sep = "<span class='sep'>·</span>", gust = c.wind_gusts_10m != null ? Math.round(c.wind_gusts_10m) : 0, w = Math.round(c.wind_speed_10m);
-    $("wx").innerHTML = "<span class='lbl'>" + (WX[forced ? window.DEV.code : c.weather_code] || "clima") + (forced && !CFG.clean ? " (dev)" : "") + "</span> <b>" + Math.round(c.temperature_2m) + "°</b>" + sep +
-      "<span class='lbl'>mín</span> <b>" + Math.round(d.temperature_2m_min[0]) + "°</b> <span class='lbl'>máx</span> <b>" + Math.round(d.temperature_2m_max[0]) + "°</b>" + sep +
-      "<b>" + Math.round(c.relative_humidity_2m) + "%</b> <span class='lbl'>humedad</span>" + sep +
-      "<span class='lbl'>viento</span> <b>" + w + "</b> <span class='lbl'>km/h</span>" + (gust >= w + 10 ? " <span class='lbl'>ráfagas</span> <b>" + gust + "</b>" : "");
+    // two short lines under the date: humidity and wind first, then the sky and the temperatures
+    $("wx").innerHTML = "<div><b>" + Math.round(c.relative_humidity_2m) + "%</b> <span class='lbl'>humedad</span>" + sep +
+      "<span class='lbl'>viento</span> <b>" + w + "</b> <span class='lbl'>km/h</span>" + (gust >= w + 10 ? " <span class='lbl'>ráfagas</span> <b>" + gust + "</b>" : "") + "</div>" +
+      "<div><span class='lbl'>" + (WX[forced ? window.DEV.code : c.weather_code] || "clima") + (forced && !CFG.clean ? " (dev)" : "") + "</span>" + sep +
+      "<span class='lbl'>ahora</span> <b>" + Math.round(c.temperature_2m) + "°</b>" + sep +
+      "<span class='lbl'>mín</span> <b>" + Math.round(d.temperature_2m_min[0]) + "°</b>" + sep + "<span class='lbl'>máx</span> <b>" + Math.round(d.temperature_2m_max[0]) + "°</b>" +
+      (offline ? sep + "<span class='warn'>sin conexión</span>" : "") + "</div>";
     window.ENV.code = c.weather_code; window.ENV.temp = c.temperature_2m; window.ENV.wind = c.wind_speed_10m; window.ENV.gust = c.wind_gusts_10m; window.ENV.isDay = c.is_day;
     var sr = hourOf(d.sunrise[0]), ss = hourOf(d.sunset[0]);     // kept only as a cross-check against SunCalc (shown in the dev overlay)
     if (sr > 0 && ss > sr) { window.ENV.sunrise = sr; window.ENV.sunset = ss; window.ENV.sunriseOM = d.sunrise[0].slice(11); window.ENV.sunsetOM = d.sunset[0].slice(11); }
@@ -68,7 +71,7 @@
     try { x.send(); } catch (e) { wxFail(); }
   }
   function wxFail() {
-    if (lastWx) { renderWx(lastWx.data); $("wx").innerHTML += "<span class='sep'>·</span><span class='warn'>sin conexión</span>"; }
+    if (lastWx) renderWx(lastWx.data, true);
     else { $("wx").textContent = "clima no disponible · sin conexión"; }
   }
   try { var cached = JSON.parse(localStorage.getItem("wx")); if (cached && cached.data) { lastWx = cached; renderWx(cached.data); } } catch (e) {}
@@ -101,8 +104,11 @@
     Radio.init($("radioA"), $("radioB"), realHour, radioUI, false);  // loaded but silent until Spotify is unavailable
     Spotify.init(realHour, spotifyUI);
   }
-  function toggleRadio() { if (audioSrc === "spotify") Spotify.toggle(); else Radio.toggle(); }
-  function nextTrack(dir) { if (audioSrc === "spotify") Spotify.next(dir); else Radio.next(dir); }
+  function toggleRadio() { if (audioSrc === "spotify") Spotify.toggle(); else Radio.toggle(); hint("cOk"); }
+  function nextTrack(dir) { if (audioSrc === "spotify") Spotify.next(dir); else Radio.next(dir); hint(dir > 0 ? "cNext" : "cPrev"); }
+  // the on-screen remote hints under the track (◄ anterior · OK pausa · siguiente ►): the pressed one lights up for a moment
+  var hintTimer = null;
+  function hint(id) { var ids = ["cPrev", "cOk", "cNext"]; for (var i = 0; i < 3; i++) $(ids[i]).className = ids[i] === id ? "hit" : ""; clearTimeout(hintTimer); hintTimer = setTimeout(function () { $(id).className = ""; }, 700); }
 
   // ---------- dev overlay (0 key) ----------
   // fields: hour / weather code / month / day / wind (scene overrides) + quality / resolution / sky rate (live switches)
@@ -147,9 +153,9 @@
   }
 
   // ---------- keys ----------
-  var KEY = { ENTER: 13, RETURN: 10009, PLAYPAUSE: 10252, PLAY: 415, PAUSE: 19, RED: 403, GREEN: 404, BLUE: 406, LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ZERO: 48, FIVE: 53 };
+  var KEY = { ENTER: 13, RETURN: 10009, PLAYPAUSE: 10252, PLAY: 415, PAUSE: 19, RED: 403, GREEN: 404, BLUE: 406, NEXT: 10233, PREV: 10232, FF: 417, RW: 412, LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ZERO: 48, FIVE: 53 };
   function registerKeys() {
-    var names = ["MediaPlayPause", "MediaPlay", "MediaPause", "ColorF0Red", "ColorF1Green", "ColorF2Yellow", "ColorF3Blue", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    var names = ["MediaPlayPause", "MediaPlay", "MediaPause", "MediaTrackNext", "MediaTrackPrevious", "MediaFastForward", "MediaRewind", "ColorF0Red", "ColorF1Green", "ColorF2Yellow", "ColorF3Blue", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
     for (var i = 0; i < names.length; i++) { try { tizen.tvinputdevice.registerKey(names[i]); } catch (e) {} }
   }
   function clearOverrides() { var D = window.DEV; D.hour = D.code = D.month = D.day = D.year = D.wind = null; Scene.skyDirty = true; $("devmark").classList.add("hidden"); refreshWx(); }
@@ -164,6 +170,8 @@
       return;
     }
     if (D.on || hasOverrides()) {
+      // the arrows drive the overlay only while it is open; with it closed they always change the track, even with a forced hour
+      if (!D.on && (k === KEY.LEFT || k === KEY.RIGHT || k === KEY.UP || k === KEY.DOWN)) { if (k === KEY.LEFT) nextTrack(-1); if (k === KEY.RIGHT) nextTrack(1); return; }
       if (k === KEY.LEFT) { D.field = (D.field + FIELDS.length - 1) % FIELDS.length; devRender(); return; }
       if (k === KEY.RIGHT) { D.field = (D.field + 1) % FIELDS.length; devRender(); return; }
       if (k === KEY.UP) { devAdjust(1); devRender(); return; }
@@ -175,8 +183,8 @@
       if (k === KEY.FIVE) { clearOverrides(); devRender(); return; }
     }
     if (k === KEY.ENTER || k === KEY.PLAYPAUSE || k === KEY.PLAY || k === KEY.PAUSE) { toggleRadio(); e.preventDefault(); }
-    else if (k === KEY.LEFT) nextTrack(-1);
-    else if (k === KEY.RIGHT) nextTrack(1);
+    else if (k === KEY.LEFT || k === KEY.PREV || k === KEY.RW) nextTrack(-1);
+    else if (k === KEY.RIGHT || k === KEY.NEXT || k === KEY.FF) nextTrack(1);
     else if (k === KEY.RETURN) { try { tizen.application.getCurrentApplication().exit(); } catch (err) {} }
   }
 

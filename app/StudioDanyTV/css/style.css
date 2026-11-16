@@ -18,7 +18,7 @@ html,body{margin:0;width:100%;height:100%;background:#05060f;overflow:hidden;cur
 .clock .sec{font-size:58px;font-weight:300;letter-spacing:0;color:var(--accent);margin-left:16px;vertical-align:top;position:relative;top:18px;display:inline-block;min-width:72px;text-align:left;will-change:transform;
   text-shadow:0 2px 6px rgba(0,0,0,.35),0 0 22px rgba(0,0,0,.3)}
 .date{font-weight:500;font-size:40px;margin-top:8px;letter-spacing:6px;text-transform:uppercase;color:var(--ink);text-shadow:0 1px 3px rgba(0,0,0,.45),0 0 18px rgba(0,0,0,.4)}
-.weather{font-weight:300;font-size:33px;margin-top:10px;letter-spacing:.4px;color:var(--soft);text-shadow:0 1px 3px rgba(0,0,0,.5),0 0 16px rgba(0,0,0,.45)}
+.weather{font-weight:300;font-size:33px;margin-top:8px;line-height:1.28;letter-spacing:.4px;color:var(--soft);text-shadow:0 1px 3px rgba(0,0,0,.5),0 0 16px rgba(0,0,0,.45)}
 .weather b{color:var(--accent);font-weight:500}
 .weather .lbl{color:var(--soft)}
 .weather .sep{color:rgba(255,240,215,.32);margin:0 12px}
@@ -34,6 +34,9 @@ html,body{margin:0;width:100%;height:100%;background:#05060f;overflow:hidden;cur
 .radio .slot{font-weight:600;font-size:24px;letter-spacing:4px;text-transform:uppercase;color:var(--accent)}
 .radio .track{font-weight:400;font-size:36px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .radio .artist{font-weight:300;font-size:28px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* remote hints: left/right change the track, OK pauses; the pressed one lights up */
+.radio .ctl{display:flex;gap:26px;margin-top:8px;font-weight:400;font-size:20px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,240,215,.42)}
+.radio .ctl .hit{color:var(--accent)}
 .bars{display:inline-flex;gap:5px;align-items:flex-end;height:26px;width:55px;flex:none;overflow:hidden}
 .bars i{width:7px;height:26px;background:var(--accent);transform:scaleY(.25);transform-origin:bottom;animation:eq 1s infinite ease-in-out}
 .bars i:nth-child(2){animation-delay:.22s}.bars i:nth-child(3){animation-delay:.41s}.bars i:nth-child(4){animation-delay:.13s}.bars i:nth-child(5){animation-delay:.33s}
@@ -41,10 +44,9 @@ html,body{margin:0;width:100%;height:100%;background:#05060f;overflow:hidden;cur
 .bars.muted i{animation:none;transform:scaleY(.4);background:#7a6a4a}
 @keyframes eq{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
 
-/* tag top-left, small: the pixel font stays here as the brand mark */
-.corner{position:fixed;left:84px;top:72px;z-index:5;text-align:left;color:var(--dim);text-shadow:0 0 3px #000,0 0 12px rgba(0,0,0,.7);will-change:transform}
-.corner .tag{font-family:"PS2P",monospace;font-size:16px;letter-spacing:3px;color:var(--accent)}
-.corner .place{font-weight:300;font-size:26px;letter-spacing:1px;margin-top:10px;color:var(--soft)}
+/* top-left: just the place, as a quiet reference */
+.corner{position:fixed;left:84px;top:64px;z-index:5;text-align:left;color:var(--dim);text-shadow:0 0 3px #000,0 0 12px rgba(0,0,0,.7);will-change:transform}
+.corner .place{font-weight:300;font-size:26px;letter-spacing:1px;color:var(--soft)}
 
 .dev{position:fixed;left:84px;top:430px;z-index:6;margin:0;font-family:"VT323",monospace;font-size:34px;line-height:1.2;
   color:#8dffb0;background:rgba(0,0,0,.65);padding:12px 18px;border:2px solid #2d6;max-width:1500px;white-space:pre-wrap}

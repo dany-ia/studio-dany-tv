@@ -42,7 +42,7 @@
     var e = t - ferry.t, x = -70 + e * ferry.v; if (x > 1000) { ferry.t = -1; return; }
     var y = HOR_Y - 2, hull = L.d > 0.3 ? "#f4f4f4" : "#9aa0b8", bob = Math.round(Math.sin(e * 0.8));
     R(x, y + bob, 60, 5, hull); R(x + 6, y - 5 + bob, 48, 5, hull); R(x + 14, y - 9 + bob, 30, 4, hull); R(x + 24, y - 13 + bob, 6, 4, "#2bb3a9");
-    for (var i = 0; i < 8; i++) R(x + 9 + i * 6, y - 3 + bob, 2, 2, L.night > 0.3 ? "#ffd36b" : "#5aa0c8");
+    for (var i = 0; i < 8; i++) R(x + 9 + i * 6, y - 3 + bob, 2, 2, L.d < 0.3 ? "#ffd36b" : "#5aa0c8");
     R(x, y + 5 + bob, 60, 1, "#1b6f8a"); R(x - 6, y + 2 + bob, 6, 1, "#eafcff"); R(x + 60, y + 3 + bob, 8, 1, "#eafcff");    // wake
     R(x + 40, y - 17 + bob, 1, 5, "#333"); R(x + 41, y - 17 + bob, 4, 3, "#e8453c");
   }
@@ -52,6 +52,26 @@
     R(x, y + bob, 22, 3, "#8a5a2b"); R(x + 10, y - 16 + bob, 1, 16, "#5a3a1a");
     for (var i = 0; i < 14; i++) R(x + 11, y - 16 + i + bob, Math.round(i * 0.7) + 1, 1, sail);
     for (var j = 0; j < 10; j++) R(x + 10 - Math.round(j * 0.5), y - 12 + j + bob, Math.round(j * 0.5) + 1, 1, sail);
+  }
+
+  /* Night lights of the ferry and the sailboat, painted in the glow pass (after the night tint) so they stay bright:
+     two rows of lit portholes, deck and mast lamps, a soft halo and their flickering reflection on the water.
+     A light is skipped where the boat is behind a palm trunk or the bar. */
+  function seen(x) { return x > 2 && x < 548 && !(x > 167 && x < 181) && !(x > 335 && x < 349); }
+  function lamp(x, y, c, t, refl) {
+    if (!seen(x)) return;
+    R(x - 1, y - 1, 4, 4, "rgba(255,211,107,0.22)"); R(x, y, 2, 2, c);
+    if (refl) R(x + Math.round(Math.sin(t * 3 + x) * 1.5), HOR_Y + 5 + ((x * 7) % 5), 2, 1, "rgba(255,211,107," + (0.3 + 0.25 * Math.sin(t * 5 + x)).toFixed(2) + ")");
+  }
+  function boatLights(t, L) {
+    if (L.d >= 0.3) return;
+    var i, e, x, y, bob;
+    if (ferry.t >= 0) { e = t - ferry.t; x = -70 + e * ferry.v; y = HOR_Y - 2; bob = Math.round(Math.sin(e * 0.8));
+      for (i = 0; i < 9; i++) lamp(x + 6 + i * 6, y - 3 + bob, "#ffe08a", t, i % 2 === 0);                   // hull portholes
+      for (i = 0; i < 7; i++) lamp(x + 10 + i * 6, y - 8 + bob, "#ffd36b", t, false);                         // upper deck
+      for (i = 0; i < 4; i++) lamp(x + 17 + i * 7, y - 12 + bob, "#fff2cc", t, false);                        // top deck
+      lamp(x + 40, y - 19 + bob, "#ff5e5e", t, false); lamp(x + 58, y - 1 + bob, "#9bff8a", t, true); lamp(x + 1, y - 1 + bob, "#ff5e5e", t, true); }   // mast, bow and stern
+    if (boat.t >= 0) { e = t - boat.t; x = 1000 - e * boat.v; y = HOR_Y - 1; bob = Math.round(Math.sin(e * 1.1)); lamp(x + 10, y - 18 + bob, "#fff2cc", t, false); lamp(x + 4, y - 2 + bob, "#ffd36b", t, true); }
   }
 
   /* ---------- characters: cached frames ----------
@@ -65,16 +85,33 @@
     { shirt: "#c4a2ff", hair: "#2b1d14", skin: "#8d5a3b", pants: "#3b5a8a", hat: null }
   ];
   var frames = {}, Z = 1.5;                                  // characters are drawn at 1.5x like the bartender
+  /* Wardrobe (v0.4.2): swimwear by day, clothes at night. WEAR is "d" or "n" (set every frame from the daylight) and is part
+     of every frame key. By day look(v) returns a palette whose shirt / pants are markers; the frame painter below turns them
+     into bare skin plus trunks (style 0), a bikini (1) or a one-piece (2), drops the shirt seam and leaves the feet bare. */
+  var WEAR = "d", curSwim = null, SWIMS = [];
+  (function () { var ST = [0, 0, 1, 0, 2, 1]; for (var i = 0; i < VARIANTS.length; i++) { var B = VARIANTS[i]; SWIMS.push({ skin: B.skin, hair: B.hair === "#2b1d14" ? "#2b1d15" : B.hair, hat: B.hat, shirt: "@top", pants: "@legs", style: ST[i % ST.length], c: B.shirt === "#f4f4f4" ? B.pants : B.shirt }); } })();
+  function look(v) { if (WEAR !== "d") { curSwim = null; return VARIANTS[v]; } curSwim = SWIMS[v]; return curSwim; }
   function frame(key, w, h, ox, oy, paint) {                 // ox, oy = origin (feet) inside the canvas, in unscaled units
-    var c = frames[key];
-    if (!c) { c = document.createElement("canvas"); c.width = w * Z; c.height = h * Z; P.withContext(c.getContext("2d"), function () { paint(function (x, y, ww, hh, col) { R((ox + x) * Z, (oy + y) * Z, ww * Z, hh * Z, col); }); }); c.ox = ox * Z; c.oy = oy * Z; frames[key] = c; }
-    return c;
+    key += WEAR; var c = frames[key];
+    if (!c) {
+      var S = curSwim, B = function (x, y, ww, hh, col) { R((ox + x) * Z, (oy + y) * Z, ww * Z, hh * Z, col); };
+      c = document.createElement("canvas"); c.width = w * Z; c.height = h * Z;
+      P.withContext(c.getContext("2d"), function () { paint(!S ? B : function (x, y, ww, hh, col) {
+        if (col === "@top") { if (S.style === 2) { B(x, y, ww, hh, S.c); return; } B(x, y, ww, hh, S.skin); if (S.style === 1) B(x, y + 1, ww, Math.min(4, hh), S.c); return; }
+        if (col === "@legs") { if (ww > 10) { B(x, y, 5, hh, S.c); B(x + 5, y, ww - 5, hh, S.skin); } else if (hh >= 6) { var k = S.style === 0 ? 5 : 3; B(x, y, ww, k, S.c); B(x, y + k, ww, hh - k, S.skin); } else B(x, y, ww, hh, S.c); return; }
+        if (col === "#2b1d14" && ww >= 3 && hh <= 2) { B(x, y, ww, hh, S.skin); return; }       // shoes -> bare feet
+        if (col === "#ffffff" && ww === 2 && hh >= 12) return;                                    // no shirt seam on a bare chest
+        B(x, y, ww, hh, col);
+      }); });
+      c.ox = ox * Z; c.oy = oy * Z; frames[key] = c;
+    }
+    curSwim = null; return c;
   }
   function put(c, x, y) { P.ctx().drawImage(c, Math.round(x - c.ox), Math.round(y - c.oy)); }
 
   /* person walking (dir -1/1, two leg frames) */
   function walkFrame(v, f, dir) {
-    var V = VARIANTS[v];
+    var V = look(v);
     return frame("w" + v + f + dir, 28, 44, 14, 42, function (Q) {
       var d = dir;
       Q(-4, -34, 8, 8, V.skin); Q(-5, -36, 10, 3, V.hair); Q(d > 0 ? 3 : -5, -33, 2, 5, V.hair);           // head, hair
@@ -88,7 +125,7 @@
   }
   /* person sitting on a stool, back to the viewer (nod 0/1, sip 0/1) */
   function sitFrame(v, nod, sip) {
-    var V = VARIANTS[v];
+    var V = look(v);
     return frame("s" + v + nod + sip, 30, 44, 15, 40, function (Q) {
       var n = nod;
       Q(-5, -36 + n, 10, 10, V.skin); Q(-6, -38 + n, 12, 4, V.hair); Q(-6, -34 + n, 1, 4, V.hair); Q(5, -34 + n, 1, 4, V.hair);
@@ -122,7 +159,7 @@
     });
   }
   function selfieFrame(v, flash) {
-    var V = VARIANTS[v];
+    var V = look(v);
     return frame("f" + v + flash, 28, 48, 14, 46, function (Q) {
       Q(-4, -34, 8, 8, V.skin); Q(-5, -36, 10, 3, V.hair); Q(-1, -31, 1, 1, "#2b1d14"); Q(2, -31, 1, 1, "#2b1d14"); Q(0, -28, 2, 1, "#a05a3a");
       if (V.hat) { Q(-6, -38, 12, 2, V.hat); Q(-4, -41, 8, 3, V.hat); }
@@ -182,7 +219,7 @@
   }
   function updateAgents(t, dt, S, L) {
     var h = S.hour;
-    CTX = context(t, S, L);
+    CTX = context(t, S, L); WEAR = L.d > 0.35 ? "d" : "n";
     if (t > nextArrival) { nextArrival = t + rnd(6, 20); if (patronsHere() < wanted(h) && Math.random() < 0.8) spawnPatron(t, h); }
     if (t > nextSpecial) { nextSpecial = t + rnd(60, 180); spawnSpecial(t, h); }
     var closing = h >= 3 && h < 6.5;
@@ -283,7 +320,7 @@
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
   function context(t, S, L) {
     var E = global.ENV || {}, W = S.weather || {}, dow = S.date ? S.date.getDay() : 0, h = S.hour, A = S.astro || {};
-    return { t: t, h: h, S: S, L: L, day: L.d > 0.5, night: L.d < 0.1, rain: W.rain || 0, wet: (W.rain || 0) > 0.3, storm: !!W.storm,
+    return { t: t, h: h, S: S, L: L, day: L.d > 0.5, night: L.d < 0.1, cloud: W.cloud || 0, clear: (W.cloud || 0) <= 0.5 && !(W.rain > 0) && !(W.fog > 0), rain: W.rain || 0, wet: (W.rain || 0) > 0.3, storm: !!W.storm,
       wind: S.wind || 0, windEff: S.windEff != null ? S.windEff : (S.wind || 0), temp: E.temp != null ? E.temp : 28,
       weekend: dow === 0 || dow === 6 || (dow === 5 && h >= 18), sat: dow === 6, month: S.month, dom: S.day, fiesta: !!FIESTAS[S.month + "-" + S.day], love: S.month === 2 && S.day === 14,
       fullMoon: A.moonFrac > 0.9 && A.moonUp > 0.2, closing: h >= 3 && h < 6.5, fire: fireOn };
@@ -298,12 +335,12 @@
   function actor(o) { o.walk = 0; if (!o.dir) o.dir = 1; if (o.v == null) o.v = Math.floor(Math.random() * VARIANTS.length); agents.push(o); return o; }
   function busy(z) { for (var i = 0; i < agents.length; i++) if (agents[i].zone === z) return true; return false; }
   function sandX(a, b) { var x = rnd(a, b); return x > 258 && x < 342 ? (x < 300 ? x - 84 : x + 84) : x; }   // a free spot on the open sand, never on the fire pit
-  function walker(a) { put(walkFrame(a.v, Math.floor(a.walk) % 2, a.dir), a.x, a.y); }
+  function walker(a) { var w = WEAR; if (a.zone === "swim") WEAR = "d"; put(walkFrame(a.v, Math.floor(a.walk) % 2, a.dir), a.x, a.y); WEAR = w; }   // swimmers stay in swimwear whatever the hour
   function say(a, t, icons, every) { if (t > (a.nextBubble || 0)) { a.icon = pick(icons); a.bubbleUntil = t + rnd(2, 3); a.nextBubble = t + rnd(every, every * 2.2); } }
 
   /* ---------- extra cached frames ---------- */
   function groundSitFrame(v, dir, arm) {                  // sitting cross-legged on the sand, side view; arm 0 = holding a stick out, 1 = hand at the mouth
-    var V = VARIANTS[v];
+    var V = look(v);
     return frame("g" + v + dir + arm, 30, 36, 15, 34, function (Q) {
       var d = dir;
       Q(-4, -25, 8, 8, V.skin); Q(-5, -27, 10, 3, V.hair); Q(d > 0 ? -5 : 3, -24, 2, 5, V.hair); Q(d > 0 ? 2 : -3, -22, 1, 1, "#2b1d14");
@@ -314,7 +351,7 @@
     });
   }
   function lieFrame(v, knee) {                            // lying in the hammock, head to the left; knee 0/1 = one knee up
-    var V = VARIANTS[v];
+    var V = look(v);
     return frame("l" + v + knee, 44, 18, 22, 16, function (Q) {
       Q(-17, -9, 7, 7, V.skin); Q(-19, -10, 3, 8, V.hair); Q(-17, -11, 7, 2, V.hair);
       if (V.hat) Q(-16, -13, 9, 4, V.hat); else Q(-12, -6, 1, 1, "#2b1d14");
@@ -324,7 +361,7 @@
     });
   }
   function surfFrame(v, dir) {                            // crouched on a board, arms out
-    var V = VARIANTS[v];
+    var V = look(v);
     return frame("u" + v + dir, 26, 28, 13, 26, function (Q) {
       var d = dir;
       Q(-3 + d, -23, 6, 6, V.skin); Q(-4 + d, -25, 8, 3, V.hair); Q(d > 0 ? 3 : -2, -21, 1, 1, "#2b1d14");
@@ -333,7 +370,7 @@
     });
   }
   function punchFrame(v, dir, f) {                        // standing, fists up; f = 1 throws the front arm
-    var V = VARIANTS[v];
+    var V = look(v);
     return frame("p" + v + dir + f, 36, 44, 18, 42, function (Q) {
       var d = dir;
       Q(-4, -34, 8, 8, V.skin); Q(-5, -36, 10, 3, V.hair); Q(d > 0 ? -5 : 3, -33, 2, 5, V.hair); Q(d > 0 ? 1 : -2, -31, 1, 1, "#2b1d14"); Q(d > 0 ? 1 : -3, -28, 2, 1, "#a05a3a");
@@ -433,10 +470,11 @@
     else if (go(a, dt, -26, WALK_Y)) return false;
   }
   function drawSwim(a, t) {
-    var sw = a.state === "swim", y = a.y + (sw ? Math.sin(t * 2 + a.ph) * 1.5 : 0);
+    var sw = a.state === "swim", y = a.y + (sw ? Math.sin(t * 2 + a.ph) * 1.5 : 0), wr = WEAR; WEAR = "d";
     putWater(walkFrame(a.v, sw ? 0 : Math.floor(a.walk) % 2, a.dir), a.x, y, a.vis);
     if (sw && Math.sin(t * 1.1 + a.ph * 3) > 0.82) { var V = VARIANTS[a.v], up = Math.floor(t * 6) % 2; R(a.x - 12, y - 12 - up * 3, 3, 9, V.skin); R(a.x + 9, y - 9 - (1 - up) * 3, 3, 9, V.skin); R(a.x - 14, y - 16, 2, 2, "#ffffff"); R(a.x + 13, y - 14, 2, 2, "#ffffff"); }
     if (t < a.bubbleUntil) bubble(a.x + 12, y - a.vis - 2, a.icon);
+    WEAR = wr;
   }
 
   /* ---------- 4. surfer: rides in from the left, carves, turns back (or wipes out and paddles home) ---------- */
@@ -451,7 +489,7 @@
         else { a.x -= 17 * dt; a.y = a.y0 + Math.sin(t * 2) * 1; if (a.x < -44) return false; }
       },
       drawSea: function (a, t) {
-        var x = a.x, y = a.y, d = a.dir, V = VARIANTS[a.v], i;
+        var x = a.x, y = a.y, d = a.dir, V = VARIANTS[a.v], i, wr = WEAR; WEAR = "d";
         if (a.state === "ride") {
           R(x - d * 8 - 22, y - 7, 44, 1, "rgba(255,255,255,0.35)"); R(x - d * 10 - 14, y - 5, 28, 2, "rgba(255,255,255,0.55)");      // the lip of the wave behind the rider
           for (i = 0; i < 5; i++) R(d > 0 ? x - 18 - i * 7 : x + 12 + i * 7, y + 1 + (i % 2), 6 - i, 1, "rgba(255,255,255," + (0.8 - i * 0.15).toFixed(2) + ")");   // wake
@@ -465,6 +503,7 @@
           R(x - 11, y, 22, 2, a.board); R(x - 13, y - 1, 2, 2, a.board); R(x - 6, y - 4, 13, 4, V.shirt); R(x + 7, y - 3, 5, 3, V.pants); R(x - 11, y - 6, 5, 5, V.skin); R(x - 11, y - 7, 5, 2, V.hair);
           R(x - 4 + pd * 5, y + 1, 2, 3, V.skin); R(x + 12, y + 1, 5 - pd * 2, 1, "rgba(255,255,255,0.6)");
         }
+        WEAR = wr;
       } });
   }
 
@@ -605,7 +644,7 @@
       draw: function (a, t) {
         if (a.state === "in" || a.state === "out") { walker(a); return; }
         put(walkFrame(a.v, 0, 1), a.x, a.y); R(a.x + 6, a.y - 47, 3, 10, VARIANTS[a.v].skin);
-        var w = CTX ? CTX.windEff : 12, k = a.k, hx = a.x + 8, hy = a.y - 47, kx = hx + (58 + Math.sin(t * 0.5) * 11 + Math.min(18, w * 0.5)) * k, ky = hy - (258 + Math.sin(t * 0.83 + 1) * 9 + Math.sin(t * 2.7) * 2) * k, i, n = 36, sh = Math.ceil((hy - ky) / n) + 1;
+        var w = CTX ? CTX.windEff : 12, k = a.k, hx = a.x + 8, hy = a.y - 47, kx = hx + (58 + Math.sin(t * 0.5) * 11 + Math.min(18, w * 0.5)) * k, ky = hy - (244 + Math.sin(t * 0.83 + 1) * 9 + Math.sin(t * 2.7) * 2) * k, i, n = 36, sh = Math.ceil((hy - ky) / n) + 1;
         for (i = 1; i < n; i++) { var u = i / n; R(hx + (kx - hx) * u * u, hy + (ky - hy) * u, 1, sh, "rgba(255,255,255,0.65)"); }       // the line, bellied by the wind
         var ws = [2, 6, 10, 8, 6, 4, 2]; for (i = 0; i < 7; i++) R(kx - ws[i] / 2, ky - 6 + i * 2, ws[i], 2, i < 3 ? a.c1 : a.c2);
         for (i = 0; i < 5; i++) R(kx - 1 + Math.sin(t * 4 + i) * 2 - i, ky + 10 + i * 4, 2, 2, i % 2 ? a.c1 : a.c2);
@@ -620,16 +659,56 @@
         if (a.mode === "rain") { var ux = a.x + a.dir * 2, uy = a.y - 70; R(ux - 13, uy, 26, 3, a.c); R(ux - 10, uy - 3, 20, 3, a.c); R(ux - 6, uy - 5, 12, 2, a.c); R(ux, uy + 3, 1, 26, "#2b2b33"); }
       } });
   }
+  /* The night's show: people walk to the water's edge first (LEAD seconds), then 60-95 s of rockets with a fast finale.
+     Spectators stand with their backs to us. Up there their heads are above the sand band that the night tint covers, so
+     near the shore they are painted in the "glow" pass (after the tint) from frames that carry the night colours already. */
+  function nightHex(c) { if (c.charAt(0) !== "#") return c; var k = 0.72, r = parseInt(c.slice(1, 3), 16), g = parseInt(c.slice(3, 5), 16), b = parseInt(c.slice(5, 7), 16); return "rgb(" + Math.round(r * (1 - k) + 18 * k) + "," + Math.round(g * (1 - k) + 28 * k) + "," + Math.round(b * (1 - k) + 72 * k) + ")"; }
+  function backFrame(v, f, night) {                       // standing with the back to us; f 0/1 = steps, 2 = both arms up
+    var V = look(v);
+    return frame("b" + v + f + (night ? "n" : "d"), 28, 44, 14, 42, function (Q0) {
+      var Q = night ? function (x, y, w, h, c) { Q0(x, y, w, h, nightHex(c)); } : Q0;
+      Q(-4, -34, 8, 8, V.skin); Q(-5, -36, 10, 7, V.hair); Q(-2, -28, 4, 2, V.skin);
+      if (V.hat) { Q(-6, -38, 12, 2, V.hat); Q(-4, -41, 8, 3, V.hat); }
+      Q(-5, -26, 10, 12, V.shirt); Q(-1, -26, 2, 12, "rgba(0,0,0,0.12)");
+      if (f === 2) { Q(-8, -34, 3, 10, V.skin); Q(5, -34, 3, 10, V.skin); } else { Q(-7, -25, 2, 9, V.skin); Q(5, -25, 2, 9, V.skin); }
+      if (f === 1) { Q(-5, -14, 3, 11, V.pants); Q(2, -14, 3, 12, V.pants); Q(-5, -3, 3, 2, "#2b1d14"); Q(2, -2, 3, 2, "#2b1d14"); }
+      else { Q(-4, -14, 3, 12, V.pants); Q(1, -14, 3, 12, V.pants); Q(-4, -2, 3, 2, "#2b1d14"); Q(1, -2, 3, 2, "#2b1d14"); }
+    });
+  }
+  var WATCH_X = [30, 56, 82, 108, 134, 196, 222, 248, 272, 378, 404, 428], LEAD = 26;      // free spots along the shore (clear of trunks, fire pit and chairs)
+  function spectators(t, until, force) {
+    var xs = WATCH_X.slice(), n = 5 + Math.floor(rnd(0, 4.99));
+    for (var i = 0; i < n; i++) actor({ zone: "show", x: -16 - i * 14, y: WALK_Y + rnd(-4, 6), sx: xs.splice(Math.floor(Math.random() * xs.length), 1)[0], sy: 398 + Math.floor(rnd(0, 6)), state: "in", until: until + rnd(2, 8), forced: force, nextBubble: t + LEAD + rnd(2, 20), nextCheer: t + LEAD + rnd(3, 14), cheerUntil: 0,
+      step: function (a, t, dt) {
+        if (a.state === "in") { if (go(a, dt, a.sx, a.y, 36)) a.state = "up"; }
+        else if (a.state === "up") { if (go(a, dt, a.sx, a.sy, 30)) a.state = "watch"; }
+        else if (a.state === "watch") {
+          if (t > a.until || CTX.closing) { a.state = "down"; return; }
+          say(a, t, ["star", "heart", "excl", "smile", "star"], 9);
+          if (t > a.nextCheer) { a.cheerUntil = t + rnd(0.9, 1.8); a.nextCheer = t + rnd(6, 16); }
+        }
+        else if (a.state === "down") { if (go(a, dt, a.sx, 464, 26)) a.state = "out"; }
+        else if (go(a, dt, -26, WALK_Y)) return false;
+        a.layer = (a.state === "up" || a.state === "watch" || a.state === "down") && a.y < 460 ? "glow" : null;
+      },
+      draw: walker,
+      drawSky: function (a, t, L) {
+        var w = a.state === "watch"; put(backFrame(a.v, w ? (t < a.cheerUntil ? 2 : 0) : Math.floor(a.walk) % 2, L.d < 0.35), a.x, a.y - (w && t < a.cheerUntil ? Math.floor(t * 6) % 2 : 0));
+        if (w && t < a.bubbleUntil) bubble(a.x + 10, a.y - 68, a.icon);
+      } });
+  }
   var FWC = ["255,211,107", "255,94,122", "94,242,255", "155,255,138", "196,162,255", "255,157,59"];
   function evFireworks(t, C, force) {
-    actor({ zone: "sky", layer: "glow", x: 0, y: 0, t0: t, dur: C.fiesta ? rnd(40, 70) : rnd(20, 34), next: t + 0.5, rockets: [], sparks: [], forced: force,
+    var dur = rnd(60, 95);
+    spectators(t, t + LEAD + dur, force);
+    actor({ zone: "sky", layer: "glow", x: 0, y: 0, t0: t + LEAD, dur: dur, next: t + LEAD, rockets: [], sparks: [], forced: force,
       step: function (a, t, dt) {
-        var i, k, r, s, on = t - a.t0 < a.dur && (a.forced || !CTX.wet);
-        if (on && t > a.next && a.sparks.length < 96) { a.next = t + rnd(0.7, 2.2); a.rockets.push({ x: rnd(60, 600), y: HOR_Y - 2, ty: rnd(46, 150), vy: -rnd(110, 140), c: pick(FWC) }); }
+        var i, k, r, s, e = t - a.t0, on = e >= 0 && e < a.dur && (a.forced || !CTX.wet), wait = e < 0 && (a.forced || !CTX.wet);
+        if (on && t > a.next && a.sparks.length < 120) { a.next = t + (e > a.dur - 7 ? rnd(0.2, 0.45) : rnd(0.5, 1.6)); a.rockets.push({ x: rnd(60, 600), y: HOR_Y - 2, ty: rnd(46, 150), vy: -rnd(110, 140), c: pick(FWC) }); }
         for (i = a.rockets.length - 1; i >= 0; i--) { r = a.rockets[i]; r.y += r.vy * dt;
           if (r.y <= r.ty) { for (k = 0; k < 24; k++) { var an = k / 24 * 6.283, sp = k % 2 ? rnd(40, 58) : rnd(20, 30); a.sparks.push({ x: r.x, y: r.y, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, life: rnd(1.1, 1.7), c: k % 3 ? r.c : "255,255,255" }); } a.rockets.splice(i, 1); } }
         for (i = a.sparks.length - 1; i >= 0; i--) { s = a.sparks[i]; s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 24 * dt; s.vx *= 1 - dt * 0.8; s.life -= dt; if (s.life <= 0) a.sparks.splice(i, 1); }
-        if (!on && !a.rockets.length && !a.sparks.length) return false;
+        if (!on && !wait && !a.rockets.length && !a.sparks.length) return false;
       },
       drawSky: function (a) {
         var i, r, s;
@@ -668,7 +747,7 @@
     papalote:  { zone: "sand",    cd: 300, go: evKite,     w: function (C) { return C.L.d > 0.5 && !C.wet && C.wind >= 12 && C.wind < 34 ? 1.3 : 0; } },
     corredor:  { zone: "path",    cd: 120, go: function (t, C, f) { return evCross(t, C, f, "jog"); }, w: function (C) { return C.wet || C.closing ? 0 : (C.h >= 6.3 && C.h < 9.5 ? 1.5 : (C.h >= 17 && C.h < 19 ? 0.8 : 0)); } },
     paraguas:  { zone: "path",    cd: 50,  go: function (t, C, f) { return evCross(t, C, f, "rain"); }, w: function (C) { return C.rain > 0.2 && !C.closing ? 2.5 : 0; } },
-    fuegos:    { zone: "sky",     cd: 420, go: evFireworks, w: function (C) { return C.night && C.rain < 0.2 ? (C.fiesta && (C.h >= 20 || C.h < 1.5) ? 6 : (C.sat && C.h >= 20.5 && C.h < 23.5 ? 0.3 : 0)) : 0; } },
+    fuegos:    { zone: "sky",     cd: 1500, go: evFireworks, w: function (C) { return C.night && C.clear && C.fiesta && (C.h >= 20 || C.h < 1.5) ? 6 : 0; } },   // extra shows on fiestas; the nightly ones come from showDue()
     tortuga:   { zone: "sand",    cd: 900, go: evTurtle,   w: function (C) { return C.night && !C.wet && C.month >= 5 && C.month <= 10 && (C.h >= 21 || C.h < 4.5) ? 0.9 : 0; } }
   };
   var EXCL = { hammock: 1, fire: 1, bar: 1 };                // zones where a forced event must still wait for the current one
@@ -677,8 +756,18 @@
     if (E.go(t, C, force) === false) return false;
     lastRun[name] = t; lastEvent = name; return true;
   }
+  /* the nightly fireworks: around 20:30, 23:00 and 01:30 (each night's times shift up to ±18 min), only under a clear or
+     partly clear sky (stars visible: no overcast, rain or fog). Returns the slot key when one is due right now. */
+  var SHOWS = [20.5, 23, 1.5], showDone = {};
+  function showDue(C) {
+    if (!C.night || !C.clear || C.closing || busy("sky")) return null;
+    for (var i = 0; i < SHOWS.length; i++) { var j = Math.sin((C.month * 31 + C.dom) * 12.9898 + i * 78.233) * 43758.5453, T = SHOWS[i] + ((j - Math.floor(j)) - 0.5) * 0.6, key = C.month + "-" + C.dom + "-" + i;
+      if (C.h >= T && C.h < T + 0.1 && !showDone[key]) return key; }
+    return null;
+  }
   function director(t, C) {
     while (pending.length) run(pending.shift(), t, C, true);
+    var due = showDue(C); if (due && run("fuegos", t, C, false)) showDone[due] = true;
     if (t < nextEvent) return;
     nextEvent = t + rnd(22, 60) * (C.weekend || C.fiesta ? 0.7 : 1);
     var names = [], ws = [], sum = 0, k, i;
@@ -699,7 +788,7 @@
     init: function (painter) { P = painter; R = P.R; },
     /* called every frame from sprites.js at the right z positions */
     sky: function (t, L) { if (pelican.t >= 0) drawPelican(t, L); },
-    glow: function (t, L) { drawLayer("glow", t, L); },         // after the lighting pass: fireworks keep their colour at night
+    glow: function (t, L) { boatLights(t, L); drawLayer("glow", t, L); },         // after the lighting pass: fireworks keep their colour at night
     horizon: function (t, L) { schedule(t, L); drawSea(t, L); if (ferry.t >= 0) drawFerry(t, L); if (boat.t >= 0) drawBoat(t, L); },
     sand: function (t, dt, S, L, fireLit) { fireOn = fireLit; if (crab.t >= 0) drawCrab(t); updFlies(t, dt, L); var grillOn = drawGrill(S); updSmoke(t, dt, L, S, fireLit, grillOn); updDebris(t, dt, S); },
     front: function (t, dt, S, L) { updateAgents(t, dt, S, L); director(t, CTX); drawAgents(t, L); },

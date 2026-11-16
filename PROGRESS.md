@@ -107,6 +107,27 @@ Written in a Claude chat session against the working tree; verified only in head
 - Dev overlay: new field "evento" (UP/DOWN fires the next/previous event now, ignoring conditions). Browser:
   `?event=fogata,delfines` (combine with `&hour=21&warm=45`).
 
+## v0.4.1 (2026-11-15): HUD tidy-up, track hints, nightly fireworks show (NOT yet on the TV)
+- HUD: the weather is two short right-aligned lines under the date (humidity + wind, then sky + temperatures); the
+  "STUDIO DANY VA" tag is gone, the top-left corner only says "Playa del Carmen · MX".
+- Music: hint row under the track (◄ anterior · OK pausa · siguiente ►), the pressed one lights up. Left/right now
+  change the track whenever the dev overlay is closed, even with a forced hour still active (before, a forced state
+  kept the arrows for the overlay for up to 10 min). Also registered MediaTrackNext/Previous and FF/RW.
+- Fireworks are a show: around 20:30, 23:00 and 01:30 (each night shifts up to +-18 min), only with a clear or partly
+  clear sky (cloud <= 0.5, no rain, no fog). 5-9 spectators walk to the water's edge 26 s before, stand with their
+  backs to us, cheer, and leave when it ends; 60-95 s of rockets with a fast finale. Spectators near the shore are
+  painted in the glow pass from night-shaded frames (their heads are above the sand band the night tint covers).
+  Fiesta dates keep extra shows (cooldown 25 min). Verified in a simulated night: 3 shows clear / partly cloudy,
+  0 overcast, 0 rain.
+
+## v0.4.2 (2026-11-15): wardrobe by daylight, boat lights, clearer weather line (NOT yet on the TV)
+- People wear swimwear by day (trunks / bikini / one-piece, bare feet) and clothes at night: `WEAR` in ambient.js
+  ("d" while L.d > 0.35) is part of every cached frame key; `look(v)` hands the frames marker colours that the frame
+  painter resolves. Swimmers and the surfer are always in swimwear.
+- Ferry and sailboat carry lights at night (portholes, deck rows, mast, bow/stern, reflections), painted in the glow
+  pass so the night tint does not dim them; skipped where the boat is behind a trunk or the bar.
+- Weather line 2 reads "nublado · ahora 26° · mín 23° · máx 28°" (the bare temperature after the sky was confusing).
+
 ## Next action (phase 2)
 - Build `app/StudioDanyTV` from `reference/tv_ambient_v1.html`: pixel clock, Spanish date, Open-Meteo,
   lofi radio on OK, procedural city at 60 fps on the TV engine, scanlines/vignette. Autorun on power-on.
